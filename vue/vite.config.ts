@@ -10,7 +10,7 @@ const isTauri = !!env.TAURI_ARCH
 // https://vitejs.dev/config/
 
 export default defineConfig({
-  base: isDev || isTauri ? '/' : '/infinite_image_browsing/fe-static',
+  base: isDev || isTauri ? '/' : '/infinite_image_browsing/fe-static/',
 
   envPrefix: ['VITE_', 'TAURI_'],
   plugins: [

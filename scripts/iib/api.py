@@ -964,22 +964,24 @@ def infinite_image_browsing_api(app: FastAPI, **kwargs):
 
     @app.get(api_base)
     def index_bd():
+        headers = {"Cache-Control": "no-cache, no-store, must-revalidate"}
         if fe_public_path:
             with open(index_html_path, "r", encoding="utf-8") as file:
                 content = file.read().replace(DEFAULT_BASE, fe_public_path)
-                return Response(content=content, media_type="text/html")
-        return FileResponse(index_html_path)
+                return Response(content=content, media_type="text/html", headers=headers)
+        return FileResponse(index_html_path, headers=headers)
     
     static_dir = get_data_file_path("vue/dist") if is_exe_ver else f"{cwd}/vue/dist" 
     @app.get(api_base + "/fe-static/{file_path:path}")
     async def serve_static_file(file_path: str):
         file_full_path = f"{static_dir}/{file_path}"
+        headers = {"Cache-Control": "no-cache"}
         if file_path.endswith(".js"):
             with open(file_full_path, "r", encoding="utf-8") as file:
                 content = file.read().replace(DEFAULT_BASE, fe_public_path)
-            return Response(content=content, media_type="text/javascript")
+            return Response(content=content, media_type="text/javascript", headers=headers)
         else:
-            return FileResponse(file_full_path)
+            return FileResponse(file_full_path, headers=headers)
 
     class OpenFolderReq(BaseModel):
         path: str

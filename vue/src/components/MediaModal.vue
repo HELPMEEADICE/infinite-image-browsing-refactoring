@@ -262,7 +262,7 @@ const metaEntries = computed(() => {
           </div>
           <div v-else-if="imageGenInfo" class="prompt-section">
             <div class="prompt-header">
-              <span class="material-icons" style="font-size: 16px;">article</span>
+              <span class="material-symbols-outlined" style="font-size: 16px;">article</span>
               <span>Prompt</span>
             </div>
             <div v-if="geninfoStruct().prompt" class="prompt-block">

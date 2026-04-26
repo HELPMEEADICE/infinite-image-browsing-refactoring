@@ -4,6 +4,7 @@ import { exit } from 'process'
 
 const main = async () => {
   try {
+    await rm('dist', { recursive: true, force: true })
     console.log(execSync('vue-tsc && vite build').toString('utf8'))
   } catch (error: any) {
     if (error.stdout && error.stderr) {

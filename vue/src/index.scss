@@ -2,6 +2,24 @@ $primary-color: #d03f0a;
 $danger-color: #fa114f;
 $info-color: #17a2b8;
 $success-color: #28a745;
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined' !important;
+  font-weight: normal;
+  font-style: normal !important;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
 :root {
   // ganymede的
   --grey-13: #000000;
@@ -143,9 +161,7 @@ body {
   }
   background: var(--zp-primary-background);
   color: var(--zp-primary);
-  .v-overlay,
   .v-overlay-container,
-  .v-overlay__scrim,
   .v-snackbar,
   .v-tooltip {
     z-index: 100000;

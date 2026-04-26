@@ -24,10 +24,12 @@ import { uiMessage } from './ui'
 import { t } from './i18n'
 import type { OrganizeFilesPreviewResp } from '@/api/organize'
 import { getOrganizeFilesStatus } from '@/api/organize'
+import { useTheme } from 'vuetify'
 
 const globalStore = useGlobalStore()
 const wsStore = useWorkspeaceSnapshot()
 const queue = createReactiveQueue()
+const theme = useTheme()
 
 // Organize preview modal state
 const showOrganizePreview = ref(false)
@@ -199,6 +201,7 @@ watch(
   () => globalStore.computedTheme === 'dark',
   async (enableDark) => {
     await delay()
+    theme.global.name.value = enableDark ? 'dark' : 'light'
     if (enableDark) {
       document.body.classList.add('dark')
     } else {
@@ -218,8 +221,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <v-skeleton-loader v-if="!queue.isIdle" type="article" />
-  <SplitViewTab v-else />
+  <v-theme-provider :theme="globalStore.computedTheme" with-background>
+    <v-skeleton-loader v-if="!queue.isIdle" type="article" />
+    <SplitViewTab v-else />
 
   <!-- Snackbar Host for uiMessage API -->
   <UiSnackbarHost />
@@ -264,8 +268,9 @@ onMounted(async () => {
   <!-- Media Modal (video/audio playback with tags and prompt) -->
   <MediaModal />
 
-  <!-- Tauri Launch Config Modal -->
-  <TauriLaunchModal v-if="isTauri" />
+    <!-- Tauri Launch Config Modal -->
+    <TauriLaunchModal v-if="isTauri" />
+  </v-theme-provider>
 </template>
 
 <style>

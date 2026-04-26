@@ -8,7 +8,7 @@ const props = defineProps<{
 <template>
   <!-- Use Material Icons ligature names. We keep this component name as MsIcon to align with the migration plan. -->
   <span
-    class="material-icons"
+    class="material-symbols-outlined"
     :style="{
       fontSize: typeof props.size === 'number' ? `${props.size}px` : props.size,
       lineHeight: 1,
