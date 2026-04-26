@@ -238,12 +238,18 @@ const modes = computed(() => {
     </v-dialog>
 
     <!-- ====== ACCESS CONTROL ====== -->
-    <v-alert v-if="global.conf?.enable_access_control && !global.dontShowAgain" type="info" variant="tonal" density="compact" class="ma-4">
-      <div class="d-flex align-center">
-        <span class="text-caption">{{ $t('accessControlModeTips') }}</span>
-        <v-spacer />
-        <v-btn variant="text" size="x-small" @click="global.dontShowAgain = true">{{ $t('dontShowAgain') }}</v-btn>
-      </div>
+    <v-alert
+      v-if="global.conf?.enable_access_control && !global.dontShowAgain"
+      type="info"
+      variant="tonal"
+      density="compact"
+      closable
+      class="ma-4"
+      @click:close="global.dontShowAgain = true"
+    >
+      <template #text>
+        <span class="text-caption md3-alert-text">{{ $t('accessControlModeTips') }}</span>
+      </template>
     </v-alert>
 
     <!-- ====== MAIN CONTENT ====== -->
@@ -435,12 +441,10 @@ const modes = computed(() => {
   overflow: auto;
   padding: 20px;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(384px, 1fr));
   gap: 16px;
-  max-width: 960px;
-  margin: 0 auto;
-  width: 100%;
+  align-content: start;
 }
 
 // ----- Card -----
@@ -483,6 +487,14 @@ const modes = computed(() => {
   padding: 12px 20px;
   flex-shrink: 0;
   border-top: 1px solid rgb(var(--v-theme-outline-variant));
+}
+
+.md3-alert-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
 }
 
 .text-medium-emphasis {
