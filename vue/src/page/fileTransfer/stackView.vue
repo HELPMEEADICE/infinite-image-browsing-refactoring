@@ -447,7 +447,7 @@ onMounted(() => {
   @media (max-width: 768px) {
     width: 100%;
 
-    .ant-breadcrumb>* {
+    .breadcrumb>* {
       display: inline-block;
     }
   }

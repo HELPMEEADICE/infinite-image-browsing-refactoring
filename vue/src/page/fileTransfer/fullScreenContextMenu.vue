@@ -259,7 +259,7 @@ function spanWrap (text: string) {
 
 useWatchDocument('load', e => {
   const el = e.target as HTMLImageElement
-  if (el.className === 'preview-img' || el.className?.includes?.('ant-image-preview-img')) {
+  if (el.className === 'preview-img' || el.className?.includes?.('image-preview-img')) {
     currImgResolution.value = `${el.naturalWidth} x ${el.naturalHeight}`
   }
 }, { capture: true })
@@ -302,7 +302,7 @@ const onKeydown = (e: KeyboardEvent) => {
 
 useWatchDocument('dblclick', e => {
   const cn = (e.target as HTMLElement)?.className
-  if (typeof cn === 'string' && (cn === 'ant-image-preview-img' || cn.includes?.('preview-img'))) {
+  if (typeof cn === 'string' && (cn === 'image-preview-img' || cn.includes?.('preview-img'))) {
     closeImageFullscreenPreview()
   }
 })
@@ -763,7 +763,7 @@ const editPromptAndReload = async () => {
 <style scoped lang="scss">
 .full-screen-menu {
   position: fixed;
-  z-index: 9999;
+  z-index: 11120;
   background: var(--zp-primary-background);
   padding: 8px 16px;
   box-shadow: 0px 0px 4px var(--zp-secondary);
@@ -1050,7 +1050,7 @@ const editPromptAndReload = async () => {
       transform: scale(0.95);
     }
 
-    :deep(.anticon) {
+    :deep(.material-symbols-outlined) {
       font-size: 12px;
     }
   }

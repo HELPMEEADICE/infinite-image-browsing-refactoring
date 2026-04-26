@@ -10,6 +10,7 @@ import { computed, ref, nextTick, watch } from 'vue'
 import ContextMenu from './ContextMenu.vue'
 import ChangeIndicator from './ChangeIndicator.vue'
 import DraggableImage from './DraggableImage.vue'
+import ImageFullscreenPreview from './ImageFullscreenPreview.vue'
 import { useTagStore } from '@/store/useTagStore'
 import { CloseCircleOutlined, StarFilled, StarOutlined } from '@/icon'
 import { Tag } from '@/api/db'
@@ -150,6 +151,12 @@ const closeMoreMenu = () => {
 }
 
 const minShowDetailWidth = 160
+const imagePreviewVisible = ref(false)
+const showImagePreview = (event: MouseEvent) => {
+  emit('fileItemClick', event, props.file, props.idx)
+  if (event.shiftKey || event.ctrlKey || event.metaKey) return
+  imagePreviewVisible.value = true
+}
 
 // 视频原地播放相关
 const isPlayingInline = ref(false)
@@ -243,7 +250,7 @@ const handleDrop = (event: DragEvent) => {
 const handleFileClick = (event: MouseEvent) => {
   // 检查magic switch是否开启且是图片文件（视频有自己的处理逻辑）
   if (global.magicSwitchTiktokView && props.file.type === 'file' && isImageFile(props.file.name)) {
-    // 阻止事件传播，防止 a-image 组件也触发预览
+    // 阻止事件传播，防止图片预览组件也触发预览
     event.stopPropagation()
     event.preventDefault()
     // 直接触发TikTok视图
@@ -348,7 +355,12 @@ const handleAudioClick = () => {
             :gen-diff-to-next="genDiffToNext" :gen-diff-to-previous="genDiffToPrevious" />
           <!-- change indicators END -->
 
-          <img class="preview-img" :src="imageSrc" :onerror="(e: Event) => ((e.target as HTMLImageElement).src = fallbackImage)" @click.stop="emit('fileItemClick', $event, file, idx)" />
+          <img class="preview-img" :src="imageSrc" :onerror="(e: Event) => ((e.target as HTMLImageElement).src = fallbackImage)" @click.stop="showImagePreview" />
+          <ImageFullscreenPreview
+            v-model="imagePreviewVisible"
+            :src="fullScreenPreviewImageUrl || imageSrc"
+            @visible-change="(value, last) => emit('previewVisibleChange', value, last)"
+          />
           <div class="tags-container" v-if="customTags && cellWidth > minShowDetailWidth">
             <span v-for="tag in extraTags ?? customTags" :key="tag.id" class="file-tag" :style="{ backgroundColor: tagStore.getColor(tag) }">
               {{ tag.name }}
@@ -674,7 +686,6 @@ const handleAudioClick = () => {
         }
       }
 
-      .ant-image,
       .preview-icon-wrap {
         border: 1px solid var(--zp-secondary);
         background-color: var(--zp-secondary-variant-background);

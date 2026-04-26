@@ -34,11 +34,6 @@ const splitpane = ref<{ requestFullScreen (): void }>()
 <style lang="scss">
 .img-sli {
 
-  .ant-drawer-header,
-  .ant-drawer-body {
-    padding: 0;
-  }
-
   .default-theme {
     .splitpanes__splitter {
       background-color: var(--zp-tertiary);

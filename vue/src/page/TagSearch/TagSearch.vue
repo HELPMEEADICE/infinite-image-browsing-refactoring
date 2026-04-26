@@ -377,11 +377,7 @@ const tagIdsToString = (tagIds: TagId[]) => {
   padding: 256px;
 }
 
-:deep() {
-  .ant-collapse>.ant-collapse-item>.ant-collapse-header {
-    padding: 0;
-  }
-}
+
 
 .container {
   height: var(--pane-max-height);

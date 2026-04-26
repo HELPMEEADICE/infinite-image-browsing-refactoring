@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useImgSliStore } from '@/store/useImgSli'
-import { toImageThumbnailUrl, toRawFileUrl, getFileTransferDataFromDragEvent } from '@/util/file'
+import { toImageThumbnailUrl, getFileTransferDataFromDragEvent } from '@/util/file'
 import { CloseCircleOutlined } from '@/icon'
 import { isImageFile } from '@/util'
 import { storeToRefs } from 'pinia'
@@ -51,7 +51,7 @@ const openInNewTab = () => {
       <div class="content">
         <div class="left port" @dragover.prevent @drop.prevent="onImageDrop($event, 'left')">
           <div v-if="left" class="img-wrap">
-            <AImage :src="toImageThumbnailUrl(left)" :preview="{ src: toRawFileUrl(left) }" />
+            <img :src="toImageThumbnailUrl(left)" />
             <CloseCircleOutlined class="close" @click="left = undefined" />
           </div>
           <div v-else>
@@ -61,7 +61,7 @@ const openInNewTab = () => {
         <div style="padding: 16px" />
         <div class="right port" @dragover.prevent @drop.prevent="onImageDrop($event, 'right')">
           <div v-if="right" class="img-wrap">
-            <AImage :src="toImageThumbnailUrl(right)" :preview="{ src: toRawFileUrl(right) }" />
+            <img :src="toImageThumbnailUrl(right)" />
             <CloseCircleOutlined class="close" @click="right = undefined" />
           </div>
           <div v-else>
@@ -73,9 +73,9 @@ const openInNewTab = () => {
         Tips: {{ $t('imageCompareTips') }}
       </p>
       <div class="actions" >
-        <AButton v-if="left && right" type="primary" @click="sliStore.drawerVisible = true">{{ $t('confirm') }}</AButton>
-        <AButton v-if="left && right" type="primary" @click="openInNewTab">{{ $t('confirm') }}({{$t('openInNewTab')}})</AButton>
-        <AButton style="margin-left: 16px;" @click="onCancel">{{ $t('close') }}</AButton>
+        <v-btn v-if="left && right" color="primary" @click="sliStore.drawerVisible = true">{{ $t('confirm') }}</v-btn>
+        <v-btn v-if="left && right" color="primary" @click="openInNewTab">{{ $t('confirm') }}({{$t('openInNewTab')}})</v-btn>
+        <v-btn style="margin-left: 16px;" @click="onCancel">{{ $t('close') }}</v-btn>
       </div>
 
     </div>

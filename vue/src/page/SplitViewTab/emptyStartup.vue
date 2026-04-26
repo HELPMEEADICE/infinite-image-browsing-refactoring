@@ -160,592 +160,332 @@ const modes = computed(() => {
 
 </script>
 <template>
-  <div class="container">
-    <div class="header">
-      <div class="header-left">
-        <h1>{{ $t('welcome') }}</h1>
-        <!-- Compact Magic Switch with Welcome -->
-        <div class="magic-switch-compact">
-          <v-tooltip location="bottom">
-            <template #activator="{ props: tooltipProps }">
-              <div v-bind="tooltipProps" class="ultra-cool-switch" :class="{ active: global.magicSwitchTiktokView }" @click="global.magicSwitchTiktokView = !global.magicSwitchTiktokView">
-                <div class="switch-bg">
-                  <div class="switch-track"></div>
-                  <div class="switch-thumb" :class="{ active: global.magicSwitchTiktokView }">
-                    <span class="switch-icon">{{ global.magicSwitchTiktokView ? '🎬' : '📁' }}</span>
-                  </div>
-                  <div class="switch-glow"></div>
-                </div>
-                <span class="switch-label">{{ $t('tiktokView') }}</span>
-              </div>
-            </template>
-            <div class="switch-tooltip">
-              <div class="tooltip-title">{{ $t('magicSwitchTiktokView') }}</div>
-              <div class="tooltip-status">{{ global.magicSwitchTiktokView ? $t('magicSwitchEnabled') : $t('magicSwitchDisabled') }}</div>
-              <div class="tooltip-desc">{{ $t('magicSwitchDetailDesc') }}</div>
-            </div>
-          </v-tooltip>
-        </div>
-        
-      </div>
-      
-      <div v-if="global.conf?.enable_access_control && global.dontShowAgain"
-        style="margin-left: 16px;font-size: 1.5em;">
-        <MsIcon name="lock" title="Access Control mode" style="vertical-align: text-bottom;" />
-      </div>
-      <div flex-placeholder />
-      <a href="https://github.com/zanllp/sd-webui-infinite-image-browsing" target="_blank"
-        class="quick-action">Github</a>
-      <a href="https://github.com/zanllp/sd-webui-infinite-image-browsing/blob/main/.env.example" target="_blank"
-        class="quick-action">{{ $t('privacyAndSecurity') }}</a>
-      <v-badge :content="hasNewRelease ? 'new' : undefined" :model-value="hasNewRelease" color="primary" offset-x="2" offset-y="0">
-        <a href="https://github.com/zanllp/sd-webui-infinite-image-browsing/releases" target="_blank"
-          class="quick-action">Releases</a>
-      </v-badge>
-      <a href="https://github.com/zanllp/sd-webui-infinite-image-browsing/wiki/Change-log" target="_blank"
-        class="quick-action">{{ $t('changlog') }}</a>
-      <a href="#" class="quick-action" @click.prevent="helpModalOpen = true">{{ $t('helpFeedback') }}</a>
-      <div class="quick-action" v-if="!isTauri">
-        {{ $t('sync') }}  <v-tooltip :text="$t('syncDesc')">
-          <template #activator="{ props: tooltipProps }">
-            <span v-bind="tooltipProps"><MsIcon name="help" /></span>
-          </template>
-        </v-tooltip>  :  <v-switch v-model="sync" density="compact" hide-details inset />
-      </div>
-      <v-btn-toggle v-model="global.darkModeControl" density="compact" mandatory divided>
-        <v-btn value="light">Light</v-btn>
-        <v-btn value="auto">Auto</v-btn>
-        <v-btn value="dark">Dark</v-btn>
+  <div class="md3-welcome">
+    <!-- ====== TOP APP BAR ====== -->
+    <header class="md3-topbar">
+      <h1 class="text-h5 font-weight-bold mb-0">{{ $t('welcome') }}</h1>
+
+      <v-chip
+        :variant="global.magicSwitchTiktokView ? 'tonal' : 'outlined'"
+        :color="global.magicSwitchTiktokView ? 'primary' : undefined"
+        size="small"
+        class="ml-3"
+        @click="global.magicSwitchTiktokView = !global.magicSwitchTiktokView"
+      >
+        <template #prepend>
+          <span style="font-size:14px">{{ global.magicSwitchTiktokView ? '🎬' : '📁' }}</span>
+        </template>
+        {{ $t('tiktokView') }}
+        <v-tooltip activator="parent" location="bottom" max-width="240">
+          <div class="text-body-2 font-weight-bold mb-1">{{ $t('magicSwitchTiktokView') }}</div>
+          <div class="text-caption">{{ $t('magicSwitchDetailDesc') }}</div>
+        </v-tooltip>
+      </v-chip>
+
+      <v-spacer />
+
+      <v-btn
+        variant="text"
+        size="small"
+        href="https://github.com/zanllp/sd-webui-infinite-image-browsing"
+        target="_blank"
+        icon="mdi-github"
+      />
+      <v-btn variant="text" size="small" icon="mdi-help-circle-outline" @click="helpModalOpen = true" />
+
+      <v-divider vertical class="mx-2" inset />
+
+      <span v-if="!isTauri" class="text-caption mr-1">{{ $t('sync') }}</span>
+      <v-switch v-if="!isTauri" v-model="sync" density="compact" hide-details inset />
+
+      <v-btn-toggle v-model="global.darkModeControl" density="compact" mandatory divided class="ml-2">
+        <v-btn size="x-small" value="light">Light</v-btn>
+        <v-btn size="x-small" value="auto">Auto</v-btn>
+        <v-btn size="x-small" value="dark">Dark</v-btn>
       </v-btn-toggle>
-    </div>
+    </header>
 
+    <!-- ====== HELP DIALOG ====== -->
     <v-dialog v-model="helpModalOpen" max-width="520">
-      <v-card>
-        <v-card-title>{{ $t('helpFeedback') }}</v-card-title>
-        <v-card-text>
-          <div style="display: grid; gap: 10px;">
-            <div style="display: flex; gap: 10px; align-items: flex-start;">
-              <MsIcon name="help" style="margin-top: 2px; opacity: 0.85;" />
-              <div style="flex: 1; min-width: 0;">
-                <div style="font-weight: 600;">{{ $t('helpFeedbackWay1') }}</div>
-                <div style="margin-top: 6px; display: flex; gap: 10px; flex-wrap: wrap;">
-                  <a :href="FAQ_URL" target="_blank" rel="noopener noreferrer">{{ $t('faq') }}</a>
-                  <a :href="ISSUES_SEARCH_URL" target="_blank" rel="noopener noreferrer">{{ $t('helpFeedbackSearchIssues') }}</a>
-                </div>
-              </div>
-            </div>
-
-            <div style="display: flex; gap: 10px; align-items: flex-start;">
-              <MsIcon name="code" style="margin-top: 2px; opacity: 0.85;" />
-              <div style="flex: 1; min-width: 0;">
-                <div style="font-weight: 600;">{{ $t('helpFeedbackWay2') }}</div>
-                <div style="margin-top: 6px;">
-                  <a :href="NEW_ISSUE_URL" target="_blank" rel="noopener noreferrer">{{ $t('helpFeedbackNewIssue') }}</a>
-                </div>
-              </div>
-            </div>
-
-            <div style="display: flex; gap: 10px; align-items: flex-start;">
-              <MsIcon name="mail" style="margin-top: 2px; opacity: 0.85;" />
-              <div style="flex: 1; min-width: 0;">
-                <div style="font-weight: 600;">{{ $t('helpFeedbackWay3') }}</div>
-                <div style="margin-top: 6px;">
-                  <a :href="FEEDBACK_MAIL">qc@zanllp.cn</a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </v-card-text>
+      <v-card rounded="xl">
+        <v-toolbar color="surface" density="compact" flat>
+          <v-toolbar-title class="text-h6">{{ $t('helpFeedback') }}</v-toolbar-title>
+          <v-btn variant="text" icon="mdi-close" @click="helpModalOpen = false" />
+        </v-toolbar>
+        <v-list density="compact" lines="two">
+          <v-list-item prepend-icon="mdi-help-circle-outline">
+            <v-list-item-title>{{ $t('helpFeedbackWay1') }}</v-list-item-title>
+            <v-list-item-subtitle>
+              <a :href="FAQ_URL" target="_blank">{{ $t('faq') }}</a>
+              &nbsp;·&nbsp;
+              <a :href="ISSUES_SEARCH_URL" target="_blank">{{ $t('helpFeedbackSearchIssues') }}</a>
+            </v-list-item-subtitle>
+          </v-list-item>
+          <v-list-item prepend-icon="mdi-code-tags">
+            <v-list-item-title>{{ $t('helpFeedbackWay2') }}</v-list-item-title>
+            <v-list-item-subtitle>
+              <a :href="NEW_ISSUE_URL" target="_blank">{{ $t('helpFeedbackNewIssue') }}</a>
+            </v-list-item-subtitle>
+          </v-list-item>
+          <v-list-item prepend-icon="mdi-email-outline">
+            <v-list-item-title>{{ $t('helpFeedbackWay3') }}</v-list-item-title>
+            <v-list-item-subtitle>
+              <a :href="FEEDBACK_MAIL">qc@zanllp.cn</a>
+            </v-list-item-subtitle>
+          </v-list-item>
+        </v-list>
       </v-card>
     </v-dialog>
 
-    <v-alert v-if="global.conf?.enable_access_control && !global.dontShowAgain" type="info" variant="tonal" density="compact">
-      <div class="access-mode-message">
-        <div>
-          {{ $t('accessControlModeTips') }}
-        </div>
-        <div flex-placeholder />
-        <a @click.prevent="global.dontShowAgain = true">{{ $t('dontShowAgain') }}</a>
+    <!-- ====== ACCESS CONTROL ====== -->
+    <v-alert v-if="global.conf?.enable_access_control && !global.dontShowAgain" type="info" variant="tonal" density="compact" class="ma-4">
+      <div class="d-flex align-center">
+        <span class="text-caption">{{ $t('accessControlModeTips') }}</span>
+        <v-spacer />
+        <v-btn variant="text" size="x-small" @click="global.dontShowAgain = true">{{ $t('dontShowAgain') }}</v-btn>
       </div>
     </v-alert>
-    <!--a-alert show-icon v-if="!global.dontShowAgainNewImgOpts">
-      <template #message>
-        <div class="access-mode-message">
-          <div>
-            {{ $t('majorUpdateCustomCellSizeTips') }}
-          </div>
-          <div flex-placeholder />
-          <a @click.prevent="global.dontShowAgainNewImgOpts = true">{{ $t('dontShowAgain') }}</a>
-        </div>
-      </template>
-    </a-alert-->
-    <div class="content">
-      <div class="feature-item">
-        <h2>{{ $t('walkMode') }}</h2>
-        <ul>
-          <li @click="addToExtraPath('walk')" class="item">
-            <span class="text line-clamp-1">
-              <MsIcon name="add" /> {{ $t('add') }}
-            </span>
-          </li>
-            
-          <v-btn v-if="global.showRandomImageInStartup" @click="openInCurrentTab('random-image')" color="primary" variant="outlined" rounded="pill" style="margin-bottom: 8px;"><span style="margin:0 6px;"><span style="margin-right: 8px;">🎲</span>{{ $t('tryMyLuck') }}</span></v-btn>
+
+    <!-- ====== MAIN CONTENT ====== -->
+    <div class="md3-body">
+
+      <!-- SECTION: Walk Mode -->
+      <v-card variant="flat" rounded="xl" class="md3-card">
+        <v-card-title class="text-subtitle-1 font-weight-bold d-flex align-center ga-2">
+          <v-icon icon="mdi-directions-walk" color="primary" size="20" />
+          {{ $t('walkMode') }}
+        </v-card-title>
+        <v-list density="compact" class="py-0">
+          <v-list-item prepend-icon="mdi-plus" @click="addToExtraPath('walk')" :ripple="true">
+            <v-list-item-title>{{ $t('add') }}</v-list-item-title>
+          </v-list-item>
+
+          <v-list-item v-if="global.showRandomImageInStartup" class="px-4 pb-2">
+            <v-btn @click.stop="openInCurrentTab('random-image')" color="primary" variant="tonal" rounded="pill" block>
+              <span class="mr-2">🎲</span>{{ $t('tryMyLuck') }}
+            </v-btn>
+          </v-list-item>
+
           <actionContextMenu v-for="dir in walkModeSupportedDir" :key="dir.key"
             @open-in-new-tab="openInNewTab('local', dir.dir, 'walk')"
             @open-on-the-right="openOnTheRight('local', dir.dir, 'walk')">
-            <li class="item rem" @click.prevent="openInCurrentTab('local', dir.dir, 'walk')">
-              <span class="text line-clamp-2">{{ dir.zh }}</span>
-              <template v-if="dir.can_delete">
-                <v-btn variant="text" size="small" @click.stop="onAliasExtraPathClick(dir.dir)">{{ $t('alias') }}
-                </v-btn>
-                <v-btn variant="text" size="small" @click.stop="onRemoveExtraPathClick(dir.dir, 'walk')">{{
-        $t('remove') }}
-                </v-btn>
+            <v-list-item class="md3-removable" @click="openInCurrentTab('local', dir.dir, 'walk')" :ripple="true">
+              <template #prepend>
+                <v-avatar size="32" rounded="lg" color="surface-variant">
+                  <v-icon size="18" icon="mdi-folder-outline" />
+                </v-avatar>
               </template>
-            </li>
+              <v-list-item-title>{{ dir.zh }}</v-list-item-title>
+              <template #append>
+                <span v-if="dir.can_delete" class="md3-removable-actions">
+                  <v-btn variant="text" size="x-small" @click.stop="onAliasExtraPathClick(dir.dir)">{{ $t('alias') }}</v-btn>
+                  <v-btn variant="text" size="x-small" @click.stop="onRemoveExtraPathClick(dir.dir, 'walk')">{{ $t('remove') }}</v-btn>
+                </span>
+                <v-icon v-else size="18" icon="mdi-chevron-right" />
+              </template>
+            </v-list-item>
           </actionContextMenu>
-        </ul>
-      </div>
-      <div class="feature-item" v-if="global.quickMovePaths.length">
-        <h2>{{ $t('launchFromNormalAndFixed') }}</h2>
-        <ul>
-          <li @click="addToExtraPath('scanned-fixed')" class="item">
-            <span class="text line-clamp-1">
-              <MsIcon name="add" /> {{ $t('add') }}
-            </span>
-          </li>
+        </v-list>
+      </v-card>
+
+      <!-- SECTION: Normal & Fixed -->
+      <v-card v-if="global.quickMovePaths.length" variant="flat" rounded="xl" class="md3-card">
+        <v-card-title class="text-subtitle-1 font-weight-bold d-flex align-center ga-2">
+          <v-icon icon="mdi-folder-multiple-outline" color="primary" size="20" />
+          {{ $t('launchFromNormalAndFixed') }}
+        </v-card-title>
+        <v-list density="compact" class="py-0">
+          <v-list-item prepend-icon="mdi-plus" @click="addToExtraPath('scanned-fixed')" :ripple="true">
+            <v-list-item-title>{{ $t('add') }}</v-list-item-title>
+          </v-list-item>
           <template
             v-for="dir in global.quickMovePaths.filter(({ types: ts }) => ts.includes('cli_access_only') || ts.includes('preset') || ts.includes('scanned') || ts.includes('scanned-fixed')) "
             :key="dir.key">
-
             <actionContextMenu v-for="t in dir.types.filter(v => v !== 'walk')" :key="t"
               @open-in-new-tab="openInNewTab('local', dir.dir, t)"
               @open-on-the-right="openOnTheRight('local', dir.dir, t)">
-
-              <li class="item rem" @click.prevent="openInCurrentTab('local', dir.dir, t)">
-                <span class="text line-clamp-2"><span v-if="t == 'scanned-fixed'" class="fixed">Fixed</span>{{ dir.zh
-                  }}</span>
-                <template v-if="dir.can_delete && (t === 'scanned-fixed' || t === 'scanned')">
-                  <v-btn variant="text" size="small" @click.stop="onAliasExtraPathClick(dir.dir)">{{ $t('alias') }}
-                  </v-btn>
-                  <v-btn variant="text" size="small" @click.stop="onRemoveExtraPathClick(dir.dir, t)">{{ $t('remove') }}
-                  </v-btn>
+              <v-list-item class="md3-removable" @click="openInCurrentTab('local', dir.dir, t)" :ripple="true">
+                <template #prepend>
+                  <v-avatar size="32" rounded="lg" color="surface-variant">
+                    <v-icon size="18" icon="mdi-folder-outline" />
+                  </v-avatar>
                 </template>
-              </li>
+                <v-list-item-title class="d-flex align-center">
+                  <v-chip v-if="t == 'scanned-fixed'" size="x-small" color="primary" variant="flat" class="mr-2">Fixed</v-chip>
+                  {{ dir.zh }}
+                </v-list-item-title>
+                <template #append>
+                  <span v-if="dir.can_delete && (t === 'scanned-fixed' || t === 'scanned')" class="md3-removable-actions">
+                    <v-btn variant="text" size="x-small" @click.stop="onAliasExtraPathClick(dir.dir)">{{ $t('alias') }}</v-btn>
+                    <v-btn variant="text" size="x-small" @click.stop="onRemoveExtraPathClick(dir.dir, t)">{{ $t('remove') }}</v-btn>
+                  </span>
+                  <v-icon v-else size="18" icon="mdi-chevron-right" />
+                </template>
+              </v-list-item>
             </actionContextMenu>
           </template>
-        </ul>
-      </div>
-      <div class="feature-item">
-        <h2>{{ $t('launch') }}</h2>
-        <ul>
-          <li v-for="comp in Object.keys(compCnMap) as TabPane['type'][]" :key="comp" class="item"
-            @click.prevent="openInCurrentTab(comp)">
-            <span class="text line-clamp-1">{{ compCnMap[comp] }}</span>
-          </li>
-          <li class="item" @click="imgsli.opened = true">
-            <span class="text line-clamp-1">{{ $t('imgCompare') }}</span>
-          </li>
-          <li class="item" v-if="canpreviewInNewWindow" @click="previewInNewWindow">
-            <span class="text line-clamp-1">{{ $t('openThisAppInNewWindow') }}</span>
-          </li>
-          <li class="item" v-if="lastRecord?.tabs.length" @click="restoreRecord">
-            <span class="text line-clamp-1">{{ $t('restoreLastWorkspaceState') }}</span>
-          </li>
-          <li class="item" v-for="item in workspaceSnapshot.snapshots" :key="item.id" @click="restoreWorkspaceSnapshot(item)">
-            <span class="text line-clamp-1">{{ $t('restoreWorkspaceSnapshot', [item.name]) }}</span>
-          </li>
-        </ul>
-      </div>
-      <div class="feature-item recent" v-if="global.recent.length">
-        <div class="title">
-          <h2>{{ $t('recent') }}</h2>
-          <v-btn @click="global.recent = []" variant="text" size="small">{{ $t('clear') }}</v-btn>
-        </div>
-        <ul>
-          <li v-for="item in global.recent" :key="item.key" class="item"
-            @click.prevent="openInCurrentTab('local', item.path, item.mode)">
-            <MsIcon name="draft" class="icon" />
-            <span class="text line-clamp-1">{{modePrefix(item.mode)}}{{ global.getShortPath(item.path) }}</span>
-          </li>
-        </ul>
-      </div>
+        </v-list>
+      </v-card>
+
+      <!-- SECTION: Launch -->
+      <v-card variant="flat" rounded="xl" class="md3-card">
+        <v-card-title class="text-subtitle-1 font-weight-bold d-flex align-center ga-2">
+          <v-icon icon="mdi-rocket-launch-outline" color="primary" size="20" />
+          {{ $t('launch') }}
+        </v-card-title>
+        <v-list density="compact" class="py-0">
+          <v-list-item v-for="comp in Object.keys(compCnMap) as TabPane['type'][]" :key="comp"
+            @click="openInCurrentTab(comp)" :ripple="true" append-icon="mdi-chevron-right">
+            <template #prepend>
+              <v-avatar size="40" rounded="lg" color="primary" variant="tonal">
+                <v-icon size="22" icon="mdi-open-in-new" />
+              </v-avatar>
+            </template>
+            <v-list-item-title>{{ compCnMap[comp] }}</v-list-item-title>
+          </v-list-item>
+          <v-list-item @click="imgsli.opened = true" :ripple="true" append-icon="mdi-chevron-right">
+            <template #prepend>
+              <v-avatar size="40" rounded="lg" color="primary" variant="tonal">
+                <v-icon size="22" icon="mdi-compare" />
+              </v-avatar>
+            </template>
+            <v-list-item-title>{{ $t('imgCompare') }}</v-list-item-title>
+          </v-list-item>
+          <v-list-item v-if="canpreviewInNewWindow" @click="previewInNewWindow" :ripple="true" append-icon="mdi-open-in-new">
+            <template #prepend>
+              <v-avatar size="40" rounded="lg" color="surface-variant">
+                <v-icon size="22" icon="mdi-fit-to-screen-outline" />
+              </v-avatar>
+            </template>
+            <v-list-item-title>{{ $t('openThisAppInNewWindow') }}</v-list-item-title>
+          </v-list-item>
+          <v-list-item v-if="lastRecord?.tabs.length" @click="restoreRecord" :ripple="true">
+            <template #prepend>
+              <v-avatar size="40" rounded="lg" color="surface-variant">
+                <v-icon size="22" icon="mdi-history" />
+              </v-avatar>
+            </template>
+            <v-list-item-title>{{ $t('restoreLastWorkspaceState') }}</v-list-item-title>
+          </v-list-item>
+          <v-list-item v-for="item in workspaceSnapshot.snapshots" :key="item.id" @click="restoreWorkspaceSnapshot(item)" :ripple="true">
+            <template #prepend>
+              <v-avatar size="40" rounded="lg" color="surface-variant">
+                <v-icon size="22" icon="mdi-bookmark-outline" />
+              </v-avatar>
+            </template>
+            <v-list-item-title>{{ $t('restoreWorkspaceSnapshot', [item.name]) }}</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-card>
+
+      <!-- SECTION: Recent -->
+      <v-card v-if="global.recent.length" variant="flat" rounded="xl" class="md3-card">
+        <v-card-title class="text-subtitle-1 font-weight-bold d-flex align-center ga-2">
+          <v-icon icon="mdi-clock-outline" color="primary" size="20" />
+          {{ $t('recent') }}
+          <v-spacer />
+          <v-btn @click="global.recent = []" variant="text" size="x-small" color="error">Clear</v-btn>
+        </v-card-title>
+        <v-list density="compact" class="py-0">
+          <v-list-item v-for="item in global.recent" :key="item.key"
+            @click="openInCurrentTab('local', item.path, item.mode)" :ripple="true" append-icon="mdi-chevron-right">
+            <template #prepend>
+              <v-icon size="20" icon="mdi-history" />
+            </template>
+            <v-list-item-title>{{ modePrefix(item.mode) }}{{ global.getShortPath(item.path) }}</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-card>
     </div>
 
-    <div class="ver-info" @dblclick="uiMessage.info('Ciallo～(∠・ω< )⌒☆')">
-      <div v-if="modes">
-        Mode: {{ modes }}
-      </div>
-      <div>
-        Version: {{ version.tag }} ({{machine}})
-      </div>
-      <div v-if="version.hash">
-        Hash: {{ version.hash }}
-      </div>
-      <div v-if="latestCommit && version.hash && latestCommit.sha !== version.hash">
-        Not the latest commit
-      </div>
-      <div v-if="latestCommit">
-        Latest Commit: {{ latestCommit.sha }} (Updated at {{ latestCommit.commit.author?.date }})
-      </div>
-    </div>
+    <!-- ====== FOOTER ====== -->
+    <footer class="md3-footer" @dblclick="uiMessage.info('Ciallo～(∠・ω< )⌒☆')">
+      <v-chip v-if="modes" size="x-small" variant="outlined">{{ modes }}</v-chip>
+      <span class="text-caption text-medium-emphasis">{{ version.tag }} · {{ machine }}</span>
+      <span v-if="version.hash" class="text-caption text-medium-emphasis">{{ version.hash.slice(0, 7) }}</span>
+      <span v-if="latestCommit && version.hash && latestCommit.sha !== version.hash" class="text-caption text-warning">(ahead)</span>
+      <v-btn variant="text" size="x-small" href="https://github.com/zanllp/sd-webui-infinite-image-browsing/releases" target="_blank">Releases</v-btn>
+      <v-btn variant="text" size="x-small" href="https://github.com/zanllp/sd-webui-infinite-image-browsing/wiki/Change-log" target="_blank">{{ $t('changlog') }}</v-btn>
+      <v-btn variant="text" size="x-small" href="https://github.com/zanllp/sd-webui-infinite-image-browsing/blob/main/.env.example" target="_blank">{{ $t('privacyAndSecurity') }}</v-btn>
+    </footer>
   </div>
 </template>
 
-<style scoped lang="scss">
-.access-mode-message {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-
-  a {
-    margin-left: 16px;
-  }
-}
-
-.container {
-  padding: 20px;
-  background-color: var(--zp-secondary-background);
+<style lang="scss" scoped>
+.md3-welcome {
   height: 100%;
-  overflow: auto;
-}
-
-.header {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  background: rgb(var(--v-theme-surface));
+}
+
+// ----- Top Bar -----
+.md3-topbar {
+  display: flex;
   align-items: center;
-  flex-wrap: wrap;
-}
-
-.header h1 {
-  font-size: 28px;
-  font-weight: bold;
-  color: var(--zp-primary);
-  margin: 0;
-}
-
-.quick-action {
-  margin-right: 16px;
-  font-size: 14px;
-  color: var(--zp-secondary);
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
+  padding: 12px 20px;
   gap: 4px;
-
+  border-bottom: 1px solid rgb(var(--v-theme-outline-variant));
 }
 
-.quick-action a {
-  text-decoration: none;
-  color: var(--zp-secondary);
-}
-
-.quick-action a:hover {
-  color: var(--zp-primary);
-}
-
-.content {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(384px, 1fr));
-  grid-gap: 20px;
-  margin-top: 16px;
-}
-
-.feature-item {
-  background-color: var(--zp-primary-background);
-  border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+// ----- Body -----
+.md3-body {
+  flex: 1 1 0;
+  overflow: auto;
   padding: 20px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+}
 
-  ul {
-    list-style: none;
-    padding: 4px;
-    max-height: 70vh;
-    overflow-y: auto;
+// ----- Card -----
+.md3-card {
+  background: rgb(var(--v-theme-surface));
+  border: 1px solid rgb(var(--v-theme-outline-variant));
+
+  :deep(.v-card-title) {
+    padding: 16px 16px 8px;
   }
 
-  &.recent {
-    .title {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
-
-      h2 {
-        margin: 0;
-      }
-    }
+  :deep(.v-list) {
+    background: transparent;
   }
 
-  .item {
-    margin-bottom: 10px;
-    padding: 4px 8px;
-    display: flex;
-    align-items: center;
-    position: relative;
-
-    &.rem {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    &:hover {
-      background: var(--zp-secondary-background);
-      border-radius: 4px;
-      color: var(--primary-color);
-      cursor: pointer;
-    }
-
-    .fixed {
-      background: var(--primary-color);
-      color: white;
-      font-size: .8em;
-      padding: 2px 4px;
-      border-radius: 8px;
-      margin-right: 4px;
-    }
-  }
-
-  .icon {
-    margin-right: 8px;
+  :deep(.v-list-item--density-compact) {
+    min-height: 48px;
   }
 }
 
-.feature-item h2 {
-  margin-top: 0;
-  margin-bottom: 20px;
-  font-size: 20px;
-  font-weight: bold;
-  color: var(--zp-primary);
+// ----- Removable items -----
+.md3-removable {
+  .md3-removable-actions {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  &:hover .md3-removable-actions {
+    opacity: 1;
+  }
 }
 
-
-.text {
-  flex: 1;
-  font-size: 16px;
-  word-break: break-all;
-}
-
-.ver-info {
+// ----- Footer -----
+.md3-footer {
   display: flex;
   align-items: center;
-  flex-direction: row;
   justify-content: center;
-  color: var(--zp-secondary);
-  gap: 16px;
-  padding: 32px;
   flex-wrap: wrap;
-  font-size: 0.9em;
-}
-
-/* Compact Magic Switch Styles */
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.magic-switch-compact {
+  gap: 8px;
+  padding: 12px 20px;
   flex-shrink: 0;
+  border-top: 1px solid rgb(var(--v-theme-outline-variant));
 }
 
-.ultra-cool-switch {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: var(--zp-primary-background);
-  border: 1px solid transparent;
-  border-radius: 25px;
-  cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  font-size: 12px;
-  white-space: nowrap;
-  position: relative;
-  overflow: hidden;
-  
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transition: left 0.5s;
-  }
-  
-  &:hover {
-    background: var(--zp-secondary-background);
-    border-color: var(--primary-color);
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1);
-    
-    &::before {
-      left: 100%;
-    }
-  }
-  
-  &.active {
-    background: linear-gradient(135deg, #ff8c42 0%, #ff6b35 50%, #ff4757 100%);
-    border-color: #ff8c42;
-    color: white;
-    box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4), 0 4px 15px rgba(255, 140, 66, 0.3);
-    
-    &::before {
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    }
-    
-    .switch-label {
-      color: white;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-    }
-  }
-}
-
-.switch-bg {
-  position: relative;
-  width: 44px;
-  height: 22px;
-  border-radius: 11px;
-  overflow: hidden;
-  background: linear-gradient(45deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.05));
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.switch-track {
-  position: absolute;
-  top: 1px;
-  left: 1px;
-  width: 42px;
-  height: 20px;
-  background: linear-gradient(45deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.08));
-  border-radius: 10px;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.ultra-cool-switch.active .switch-track {
-  background: linear-gradient(45deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.15));
-  box-shadow: 0 0 10px rgba(255, 140, 66, 0.5);
-}
-
-.switch-thumb {
-  position: absolute;
-  top: 1px;
-  left: 1px;
-  width: 20px;
-  height: 20px;
-  background: linear-gradient(145deg, #ffffff, #f0f0f0);
-  border-radius: 50%;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  
-  &.active {
-    transform: translateX(22px) rotate(360deg);
-    background: linear-gradient(145deg, #fff, #ffeaa6);
-    box-shadow: 0 4px 12px rgba(255, 140, 66, 0.4), 0 2px 6px rgba(255, 107, 53, 0.3);
-  }
-}
-
-.switch-icon {
-  font-size: 10px;
-  transition: all 0.3s ease;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
-}
-
-.switch-label {
-  color: var(--zp-primary);
-  font-weight: 600;
-  transition: all 0.3s ease;
-  letter-spacing: 0.5px;
-}
-
-.switch-glow {
-  position: absolute;
-  top: -1px;
-  left: -1px;
-  width: calc(100% + 2px);
-  height: calc(100% + 2px);
-  background: linear-gradient(45deg, transparent, rgba(255, 140, 66, 0.2), transparent);
-  border-radius: 12px;
-  opacity: 0;
-  transition: all 0.4s ease;
-}
-
-.ultra-cool-switch.active .switch-glow {
-  opacity: 1;
-  animation: glowPulse 2s ease-in-out infinite;
-}
-
-@keyframes glowPulse {
-  0%, 100% {
-    opacity: 0.3;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.6;
-    transform: scale(1.05);
-  }
-}
-
-.switch-tooltip {
-  max-width: 240px;
-  line-height: 1.5;
-}
-
-.tooltip-title {
-  font-weight: 600;
-  margin-bottom: 4px;
-  color: var(--primary-color);
-}
-
-.tooltip-status {
-  margin-bottom: 6px;
-  font-size: 13px;
-}
-
-.tooltip-desc {
-  font-size: 12px;
-  opacity: 0.8;
-  line-height: 1.4;
-}
-
-@media (max-width: 768px) {
-  .header-left {
-    gap: 12px;
-  }
-  
-  .ultra-cool-switch {
-    padding: 6px 10px;
-    gap: 8px;
-    font-size: 11px;
-  }
-  
-  .switch-bg {
-    width: 36px;
-    height: 18px;
-  }
-  
-  .switch-track {
-    width: 34px;
-    height: 16px;
-  }
-  
-  .switch-thumb {
-    width: 16px;
-    height: 16px;
-    
-    &.active {
-      transform: translateX(18px) rotate(360deg);
-    }
-  }
-  
-  .switch-icon {
-    font-size: 8px;
-  }
+.text-medium-emphasis {
+  opacity: 0.6;
 }
 </style>

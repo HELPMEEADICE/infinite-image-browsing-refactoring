@@ -61,10 +61,10 @@ const onDeleteClick = (idx: number) => {
 <template>
   <div class="container" ref="stackViewEl" @drop="onDrop">
     <div class="actions-panel actions">
-      <AButton @click="store.selectdFiles = []">{{ $t('clear') }}</AButton>
-      <div class="item">{{ $t('compressFile') }}: <ASwitch v-model:checked="gs.batchDownloadCompress"/></div>
-      <AButton @click="onPackClick" type="primary" :loading="!q.isIdle">{{ $t('packOnlyNotDownload') }}</AButton>
-      <AButton @click="onDownloadClick" type="primary" :loading="!q.isIdle">{{ $t('zipDownload') }}</AButton>
+      <v-btn @click="store.selectdFiles = []">{{ $t('clear') }}</v-btn>
+      <div class="item">{{ $t('compressFile') }}: <v-switch v-model="gs.batchDownloadCompress" density="compact" hide-details /></div>
+      <v-btn @click="onPackClick" color="primary" :loading="!q.isIdle">{{ $t('packOnlyNotDownload') }}</v-btn>
+      <v-btn @click="onDownloadClick" color="primary" :loading="!q.isIdle">{{ $t('zipDownload') }}</v-btn>
     </div>
     <div v-if="!selectdFiles.length" class="file-list">
       <p class="hint">{{ $t('batchDownloaDDragAndDropHint') }}</p>
