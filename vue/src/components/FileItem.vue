@@ -115,6 +115,17 @@ const moreMenuOpen = ref(false)
 const tagMenuOpen = ref(false)
 const mainMenuX = ref(0)
 const mainMenuY = ref(0)
+const moreMenuX = ref(0)
+const moreMenuY = ref(0)
+
+const openMoreMenu = (event: MouseEvent) => {
+  if (!props.enableRightClickMenu) return
+  event.stopPropagation()
+  contextMenuOpen.value = false
+  moreMenuX.value = event.clientX
+  moreMenuY.value = event.clientY
+  moreMenuOpen.value = true
+}
 
 const openContextMenu = (event: MouseEvent) => {
   if (!props.enableRightClickMenu) return
@@ -299,12 +310,10 @@ const handleAudioClick = () => {
           <close-circle-outlined />
         </div>
         <div class="more" v-if="enableRightClickMenu">
-          <v-menu v-model="moreMenuOpen" :scrim="false" :close-on-content-click="true" @update:model-value="(v) => !v && closeMoreMenu()">
-            <template #activator="{ props: menuProps }">
-              <div v-bind="menuProps" class="float-btn-wrap" @click.stop="moreMenuOpen = true; contextMenuOpen = false">
-                <ellipsis-outlined />
-              </div>
-            </template>
+          <div class="float-btn-wrap" @click.stop="openMoreMenu">
+            <ellipsis-outlined />
+          </div>
+          <v-menu v-model="moreMenuOpen" :scrim="false" :close-on-content-click="true" location-strategy="connected" :target="[moreMenuX, moreMenuY]" @update:model-value="(v) => !v && closeMoreMenu()">
             <context-menu :file="file" :idx="idx" :selected-tag="customTags"
               @context-menu-click="(e, f, i) => emit('contextMenuClick', e, f, i)"
               :is-selected-mutil-files="isSelectedMutilFiles" />
