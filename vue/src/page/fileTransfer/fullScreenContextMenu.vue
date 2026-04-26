@@ -5,7 +5,7 @@ import ExifBrowser from '@/components/ExifBrowser.vue'
 import DraggableImage from '@/components/DraggableImage.vue'
 import { useGlobalStore } from '@/store/useGlobalStore'
 import { useLocalStorage } from '@vueuse/core'
-import type { MenuInfo } from 'ant-design-vue/lib/menu/src/interface'
+import { uiMessage } from '@/ui'
 import { debounce, throttle, last } from 'lodash-es'
 import { computed, watch, onMounted } from 'vue'
 import { ref } from 'vue'
@@ -38,7 +38,7 @@ import { prefix } from '@/util/const'
 import * as Pinyin from 'jian-pinyin'
 import { Tag } from '@/api/db'
 import { aiChat } from '@/api'
-import { message } from 'ant-design-vue'
+// uiMessage already imported above
 
 const global = useGlobalStore()
 
@@ -77,7 +77,7 @@ const extraJsonMetaInfo = computed(() => {
 })
 
 const emit = defineEmits<{
-  (type: 'contextMenuClick', e: MenuInfo, file: FileNodeInfo, idx: number): void
+  (type: 'contextMenuClick', e: { key: string }, file: FileNodeInfo, idx: number): void
 }>()
 
 const promptTabActivedKey = useLocalStorage('iib@fullScreenContextMenu.prompt-tab', 'structedData' as 'structedData' | 'sourceText' | 'exif')
@@ -181,9 +181,6 @@ watch(isOutside, throttle((v) => {
 }, 300))
 
 
-function getParNode (p: any) {
-  return p.parentNode as HTMLDivElement
-}
 
 function getTextLength(text: string): number {
   // chinese characters are counted as 3 English letters
@@ -262,7 +259,7 @@ function spanWrap (text: string) {
 
 useWatchDocument('load', e => {
   const el = e.target as HTMLImageElement
-  if (el.className === 'ant-image-preview-img') {
+  if (el.className === 'preview-img' || el.className?.includes?.('ant-image-preview-img')) {
     currImgResolution.value = `${el.naturalWidth} x ${el.naturalHeight}`
   }
 }, { capture: true })
@@ -304,7 +301,8 @@ const onKeydown = (e: KeyboardEvent) => {
 }
 
 useWatchDocument('dblclick', e => {
-  if ((e.target as HTMLDivElement)?.className === 'ant-image-preview-img') {
+  const cn = (e.target as HTMLElement)?.className
+  if (typeof cn === 'string' && (cn === 'ant-image-preview-img' || cn.includes?.('preview-img'))) {
     closeImageFullscreenPreview()
   }
 })
@@ -355,12 +353,12 @@ const onTiktokViewClick = () => {
 const analyzingTags = ref(false)
 const analyzeTagsWithAI = async () => {
   if (!geninfoStruct.value.prompt) {
-    message.warning(t('aiAnalyzeTagsNoPrompt'))
+    uiMessage.warning(t('aiAnalyzeTagsNoPrompt'))
     return
   }
 
   if (!global.conf?.all_custom_tags?.length) {
-    message.warning(t('aiAnalyzeTagsNoCustomTags'))
+    uiMessage.warning(t('aiAnalyzeTagsNoCustomTags'))
     return
   }
 
@@ -393,7 +391,7 @@ Please return only tag names, do not include any other content.`
 
     const matchedTagsText = response.choices[0].message.content.trim()
     if (!matchedTagsText) {
-      message.info(t('aiAnalyzeTagsNoMatchedTags'))
+      uiMessage.info(t('aiAnalyzeTagsNoMatchedTags'))
       return
     }
 
@@ -415,9 +413,9 @@ Please return only tag names, do not include any other content.`
 
     if (tagsToAdd.length === 0) {
       if (matchedTags.length > 0) {
-        message.info(t('aiAnalyzeTagsAllTagsAlreadyAdded'))
+        uiMessage.info(t('aiAnalyzeTagsAllTagsAlreadyAdded'))
       } else {
-        message.info(t('aiAnalyzeTagsNoValidTags'))
+        uiMessage.info(t('aiAnalyzeTagsNoValidTags'))
       }
       return
     }
@@ -427,11 +425,11 @@ Please return only tag names, do not include any other content.`
       emit('contextMenuClick', { key: `toggle-tag-${tag.id}` } as any, props.file, props.idx)
     }
 
-    message.success(t('aiAnalyzeTagsSuccess', [tagsToAdd.length.toString(), tagsToAdd.map(t => t.name).join(', ')]))
+    uiMessage.success(t('aiAnalyzeTagsSuccess', [tagsToAdd.length.toString(), tagsToAdd.map(t => t.name).join(', ')]))
 
   } catch (error) {
     console.error('AI分析标签失败:', error)
-    message.error(t('aiAnalyzeTagsFailed'))
+    uiMessage.error(t('aiAnalyzeTagsFailed'))
   } finally {
     analyzingTags.value = false
   }
@@ -469,102 +467,110 @@ const editPromptAndReload = async () => {
           <FullscreenExitOutlined v-if="showFullContent" />
           <FullscreenOutlined v-else />
         </div>
-        <a-dropdown :get-popup-container="getParNode" trigger="click">
-          <div class="icon" style="cursor: pointer">
-            <SettingOutlined />
-          </div>
-          <template #overlay>
-            <div class="block-visibility-settings">
-              <div class="settings-title">{{ $t('blockVisibilitySettings') }}</div>
-              <div class="settings-list">
-                <div class="settings-item" v-for="(_, key) in global.fullscreenMenuBlockVisibility" :key="key">
-                  <a-switch v-model:checked="global.fullscreenMenuBlockVisibility[key]" size="small" />
-                  <span class="settings-label">{{ $t(`blockName_${key}`) }}</span>
-                </div>
-              </div>
+        <v-menu>
+          <template #activator="{ props }">
+            <div class="icon" style="cursor: pointer" v-bind="props">
+              <SettingOutlined />
             </div>
           </template>
-        </a-dropdown>
+          <div class="block-visibility-settings">
+            <div class="settings-title">{{ $t('blockVisibilitySettings') }}</div>
+            <div class="settings-list">
+              <div class="settings-item" v-for="(_, key) in global.fullscreenMenuBlockVisibility" :key="key">
+                <v-switch v-model="global.fullscreenMenuBlockVisibility[key]" density="compact" hide-details />
+                <span class="settings-label">{{ $t(`blockName_${key}`) }}</span>
+              </div>
+            </div>
+          </div>
+        </v-menu>
         <div style="display: flex; flex-direction: column; align-items: center; cursor: grab" class="icon"
           :title="t('fullscreenview')" @click="requestFullscreen">
           <img :src="fullscreen" style="width: 21px;height: 21px;padding-bottom: 2px;" alt="">
         </div>
-        <a-dropdown :get-popup-container="getParNode">
-          <div class="icon" style="cursor: pointer" v-if="!state.expanded">
-            <ellipsis-outlined />
-          </div>
-          <template #overlay>
-            <context-menu :file="file" :idx="idx" :selected-tag="selectedTag"
-              @context-menu-click="(e, f, i) => emit('contextMenuClick', e, f, i)" />
+        <v-menu>
+          <template #activator="{ props }">
+            <div class="icon" style="cursor: pointer" v-if="!state.expanded" v-bind="props">
+              <ellipsis-outlined />
+            </div>
           </template>
-        </a-dropdown>
+          <context-menu :file="file" :idx="idx" :selected-tag="selectedTag"
+            @context-menu-click="(e, f, i) => emit('contextMenuClick', e, f, i)" />
+        </v-menu>
         <div flex-placeholder v-if="showFullContent" />
         <div block  v-if="showFullContent && global.fullscreenMenuBlockVisibility.actionBar" class="action-bar">
 
-          <a-dropdown :trigger="['hover']" :get-popup-container="getParNode">
-            <a-button>{{ t('openContextMenu') }}</a-button>
-            <template #overlay>
-              <a-menu @click="emit('contextMenuClick', $event, file, idx)">
-                <template v-if="global.conf?.launch_mode !== 'server'">
-                  <a-menu-item key="send2txt2img">{{ $t('sendToTxt2img') }}</a-menu-item>
-                  <a-menu-item key="send2img2img">{{ $t('sendToImg2img') }}</a-menu-item>
-                  <a-menu-item key="send2inpaint">{{ $t('sendToInpaint') }}</a-menu-item>
-                  <a-menu-item key="send2extras">{{ $t('sendToExtraFeatures') }}</a-menu-item>
-                  <a-sub-menu key="sendToThirdPartyExtension" :title="$t('sendToThirdPartyExtension')">
-                    <a-menu-item key="send2controlnet-txt2img">ControlNet - {{ $t('t2i') }}</a-menu-item>
-                    <a-menu-item key="send2controlnet-img2img">ControlNet - {{ $t('i2i') }}</a-menu-item>
-                    <a-menu-item key="send2outpaint">openOutpaint</a-menu-item>
-                  </a-sub-menu>
-                </template>
-                <a-menu-item key="send2BatchDownload">{{ $t('sendToBatchDownload') }}</a-menu-item>
-                <a-sub-menu key="copy2target" :title="$t('copyTo')">
-                  <a-menu-item v-for="path in global.quickMovePaths" :key="`copy-to-${path.dir}`">{{ path.zh }}
-                  </a-menu-item>
-                </a-sub-menu>
-                <a-sub-menu key="move2target" :title="$t('moveTo')">
-                  <a-menu-item v-for="path in global.quickMovePaths" :key="`move-to-${path.dir}`">{{ path.zh }}
-                  </a-menu-item>
-                </a-sub-menu>
-                <a-menu-divider />
-                <a-menu-item key="deleteFiles">
-                  {{ $t('deleteSelected') }}
-                </a-menu-item>
-                <a-menu-item key="openWithDefaultApp">{{ $t('openWithDefaultApp') }}</a-menu-item>
-                <a-menu-item key="previewInNewWindow">{{ $t('previewInNewWindow') }}</a-menu-item>
-                <a-menu-item key="copyPreviewUrl">{{ $t('copySourceFilePreviewLink') }}</a-menu-item>
-                <a-menu-item key="copyFilePath">{{ $t('copyFilePath') }}</a-menu-item>
-                <a-menu-divider />
-                <a-menu-item key="tiktokView" @click="onTiktokViewClick">{{ $t('tiktokView') }}</a-menu-item>
-              </a-menu>
+          <v-menu open-on-hover>
+            <template #activator="{ props }">
+              <v-btn v-bind="props">{{ t('openContextMenu') }}</v-btn>
             </template>
-          </a-dropdown>
-          <AButton @click="emit('contextMenuClick', { key: 'download' } as MenuInfo, props.file, props.idx)">{{
-            $t('download') }}</AButton>
-          <a-button @click="copy2clipboardI18n(imageGenInfo)" v-if="imageGenInfo">{{
+            <v-list @click="emit('contextMenuClick', $event, file, idx)" density="compact">
+              <template v-if="global.conf?.launch_mode !== 'server'">
+                <v-list-item value="send2txt2img">{{ $t('sendToTxt2img') }}</v-list-item>
+                <v-list-item value="send2img2img">{{ $t('sendToImg2img') }}</v-list-item>
+                <v-list-item value="send2inpaint">{{ $t('sendToInpaint') }}</v-list-item>
+                <v-list-item value="send2extras">{{ $t('sendToExtraFeatures') }}</v-list-item>
+                <v-list-group value="sendToThirdPartyExtension">
+                  <template #activator="{ props }">
+                    <v-list-item v-bind="props" :title="$t('sendToThirdPartyExtension')"></v-list-item>
+                  </template>
+                  <v-list-item value="send2controlnet-txt2img">ControlNet - {{ $t('t2i') }}</v-list-item>
+                  <v-list-item value="send2controlnet-img2img">ControlNet - {{ $t('i2i') }}</v-list-item>
+                  <v-list-item value="send2outpaint">openOutpaint</v-list-item>
+                </v-list-group>
+              </template>
+              <v-list-item value="send2BatchDownload">{{ $t('sendToBatchDownload') }}</v-list-item>
+              <v-list-group value="copy2target">
+                <template #activator="{ props }">
+                  <v-list-item v-bind="props" :title="$t('copyTo')"></v-list-item>
+                </template>
+                <v-list-item v-for="path in global.quickMovePaths" :key="`copy-to-${path.dir}`">{{ path.zh }}
+                </v-list-item>
+              </v-list-group>
+              <v-list-group value="move2target">
+                <template #activator="{ props }">
+                  <v-list-item v-bind="props" :title="$t('moveTo')"></v-list-item>
+                </template>
+                <v-list-item v-for="path in global.quickMovePaths" :key="`move-to-${path.dir}`">{{ path.zh }}
+                </v-list-item>
+              </v-list-group>
+              <v-divider />
+              <v-list-item value="deleteFiles">
+                {{ $t('deleteSelected') }}
+              </v-list-item>
+              <v-list-item value="openWithDefaultApp">{{ $t('openWithDefaultApp') }}</v-list-item>
+              <v-list-item value="previewInNewWindow">{{ $t('previewInNewWindow') }}</v-list-item>
+              <v-list-item value="copyPreviewUrl">{{ $t('copySourceFilePreviewLink') }}</v-list-item>
+              <v-list-item value="copyFilePath">{{ $t('copyFilePath') }}</v-list-item>
+              <v-divider />
+              <v-list-item value="tiktokView" @click="onTiktokViewClick">{{ $t('tiktokView') }}</v-list-item>
+            </v-list>
+          </v-menu>
+          <v-btn @click="emit('contextMenuClick', { key: 'download' } as any, props.file, props.idx)">{{
+            $t('download') }}</v-btn>
+          <v-btn @click="copy2clipboardI18n(imageGenInfo)" v-if="imageGenInfo">{{
             $t('copyPrompt')
-          }}</a-button>
-          <a-button @click="copyPositivePrompt" v-if="imageGenInfo">{{
+          }}</v-btn>
+          <v-btn @click="copyPositivePrompt" v-if="imageGenInfo">{{
             $t('copyPositivePrompt')
-          }}</a-button>
-          <a-button 
+          }}</v-btn>
+          <v-btn
             @click="analyzeTagsWithAI"
             :loading="analyzingTags"
             v-if="imageGenInfo && global.conf?.all_custom_tags?.length"
           >
             {{ $t('aiAnalyzeTags') }}
-          </a-button>
-          <a-button 
-            @click="onTiktokViewClick" 
+          </v-btn>
+          <v-btn
+            @click="onTiktokViewClick"
             @touchstart.prevent="onTiktokViewClick"
-            type="default"
           >
             {{ $t('tiktokView') }}
-          </a-button>         <a-button
+          </v-btn>         <v-btn
             @click="editPromptAndReload"
           >
-            <template #icon><EditOutlined /></template>
+            <EditOutlined style="margin-right: 4px;" />
             {{ $t('editPrompt') }}
-          </a-button>
+          </v-btn>
         </div>
       </div>    
       <div class="gen-info" v-if="showFullContent">
@@ -622,19 +628,21 @@ const editPromptAndReload = async () => {
         </div>
         <div block class="lr-layout-control" v-if="global.fullscreenMenuBlockVisibility.lrLayoutControl">
           <div class="ctrl-item">
-            {{ $t('experimentalLRLayout') }}： <a-switch v-model:checked="lr" size="small" />
+            {{ $t('experimentalLRLayout') }}： <v-switch v-model="lr" density="compact" hide-details />
           </div>
           <template v-if="lr">
 
             <div class="ctrl-item">
-              {{ $t('width') }}: <a-input-number v-model:value="lrLayoutInfoPanelWidth" style="width:64px" :step="16"
-                :min="128" :max="1024" />
+              {{ $t('width') }}: <v-text-field type="number" v-model="lrLayoutInfoPanelWidth" style="width:64px" step="16"
+                :min="128" :max="1024" density="compact" hide-details />
             </div>
-            <a-tooltip :title="$t('alwaysOnTooltipInfo')">
-              <div class="ctrl-item">
-                {{ $t('alwaysOn') }}： <a-switch v-model:checked="lrMenuAlwaysOn" size="small" />
-              </div>
-            </a-tooltip>
+            <v-tooltip :text="$t('alwaysOnTooltipInfo')">
+              <template #activator="{ props }">
+                <div class="ctrl-item" v-bind="props">
+                  {{ $t('alwaysOn') }}： <v-switch v-model="lrMenuAlwaysOn" density="compact" hide-details />
+                </div>
+              </template>
+            </v-tooltip>
           </template>
         </div>
         <!-- 可拖拽的原图 -->
@@ -645,13 +653,47 @@ const editPromptAndReload = async () => {
           </div>
         </DraggableImage>
 
-        <a-tabs block v-if="global.fullscreenMenuBlockVisibility.tabs" v-model:activeKey="promptTabActivedKey">
-          <a-tab-pane key="structedData" :tab="$t('structuredData')">
-            <div>
-              <template v-if="geninfoStruct.prompt">
-                <br />
+        <template v-if="global.fullscreenMenuBlockVisibility.tabs">
+          <v-tabs grow v-model="promptTabActivedKey">
+            <v-tab value="structedData">{{ $t('structuredData') }}</v-tab>
+            <v-tab value="sourceText">{{ $t('sourceText') }}</v-tab>
+            <v-tab value="exif">EXIF</v-tab>
+          </v-tabs>
+          <v-window v-model="promptTabActivedKey">
+            <v-window-item value="structedData">
+              <div>
+                <template v-if="geninfoStruct.prompt">
+                  <br />
+                  <div class="section-header">
+                    <h3>Prompt</h3>
+                    <button
+                      class="edit-section-btn"
+                      @click="editPromptAndReload"
+                      :title="$t('editPrompt')"
+                    >
+                      <EditOutlined />
+                    </button>
+                  </div>
+                  <code v-html="spanWrap(geninfoStruct.prompt ?? '')"></code>
+                </template>
+                <template v-if="geninfoStruct.negativePrompt">
+                  <br />
+                  <div class="section-header">
+                    <h3>Negative Prompt</h3>
+                    <button
+                      class="edit-section-btn"
+                      @click="editPromptAndReload"
+                      :title="$t('editPrompt')"
+                    >
+                      <EditOutlined />
+                    </button>
+                  </div>
+                  <code v-html="spanWrap(geninfoStruct.negativePrompt ?? '')"></code>
+                </template>
+              </div>
+              <template v-if="Object.keys(geninfoStructNoPrompts).length"> <br />
                 <div class="section-header">
-                  <h3>Prompt</h3>
+                  <h3>Params</h3>
                   <button
                     class="edit-section-btn"
                     @click="editPromptAndReload"
@@ -660,12 +702,21 @@ const editPromptAndReload = async () => {
                     <EditOutlined />
                   </button>
                 </div>
-                <code v-html="spanWrap(geninfoStruct.prompt ?? '')"></code>
+                <table>
+                  <tr v-for="txt, key in geninfoStructNoPrompts" :key="key" class="gen-info-frag">
+                    <td style="font-weight: 600;text-transform: capitalize;">{{ key }}</td>
+                    <td style="cursor: pointer;" v-if="typeof txt == 'object'" @dblclick="copy(txt)">
+                      <code>{{ txt }}</code>
+                    </td>
+                    <td v-else style="cursor: pointer;" @dblclick="copy(unescapeHtml(txt))">
+                      {{ unescapeHtml(txt) }}
+                    </td>
+                  </tr>
+                </table>
               </template>
-              <template v-if="geninfoStruct.negativePrompt">
-                <br />
+              <template v-if="extraJsonMetaInfo && Object.keys(extraJsonMetaInfo).length"> <br />
                 <div class="section-header">
-                  <h3>Negative Prompt</h3>
+                  <h3>Extra Meta Info</h3>
                   <button
                     class="edit-section-btn"
                     @click="editPromptAndReload"
@@ -674,67 +725,32 @@ const editPromptAndReload = async () => {
                     <EditOutlined />
                   </button>
                 </div>
-                <code v-html="spanWrap(geninfoStruct.negativePrompt ?? '')"></code> 
+                <table class="extra-meta-table">
+                  <tr v-for="(val, key) in extraJsonMetaInfo" :key="key" class="gen-info-frag">
+                    <td style="font-weight: 600;text-transform: capitalize;">{{ key }}</td>
+                    <td style="cursor: pointer;" @dblclick="copy(val)">
+                      <code class="extra-meta-value">{{ typeof val === 'string' ? val : JSON.stringify(val, null, 2) }}</code>
+                    </td>
+                  </tr>
+                </table>
               </template>
-            </div>
-            <template v-if="Object.keys(geninfoStructNoPrompts).length"> <br />
-              <div class="section-header">
-                <h3>Params</h3>
-                <button
-                  class="edit-section-btn"
-                  @click="editPromptAndReload"
-                  :title="$t('editPrompt')"
-                >
-                  <EditOutlined />
-                </button>
-              </div>
-              <table>
-                <tr v-for="txt, key in geninfoStructNoPrompts" :key="key" class="gen-info-frag">
-                  <td style="font-weight: 600;text-transform: capitalize;">{{ key }}</td>
-                  <td style="cursor: pointer;" v-if="typeof txt == 'object'" @dblclick="copy(txt)">
-                    <code>{{ txt }}</code>
-                  </td>
-                  <td v-else style="cursor: pointer;" @dblclick="copy(unescapeHtml(txt))">
-                    {{ unescapeHtml(txt) }}
-                  </td>
-                </tr>
-              </table>
-            </template>
-            <template v-if="extraJsonMetaInfo && Object.keys(extraJsonMetaInfo).length"> <br />
-              <div class="section-header">
-                <h3>Extra Meta Info</h3>
-                <button
-                  class="edit-section-btn"
-                  @click="editPromptAndReload"
-                  :title="$t('editPrompt')"
-                >
-                  <EditOutlined />
-                </button>
-              </div>
-              <table class="extra-meta-table">
-                <tr v-for="(val, key) in extraJsonMetaInfo" :key="key" class="gen-info-frag">
-                  <td style="font-weight: 600;text-transform: capitalize;">{{ key }}</td>
-                  <td style="cursor: pointer;" @dblclick="copy(val)">
-                    <code class="extra-meta-value">{{ typeof val === 'string' ? val : JSON.stringify(val, null, 2) }}</code>
-                  </td>
-                </tr>
-              </table>
-            </template>
-          </a-tab-pane>
-          <a-tab-pane key="sourceText" :tab="$t('sourceText')">
-            <code>{{ imageGenInfo }}</code>
-          </a-tab-pane>
-          <a-tab-pane key="exif" :tab="'EXIF'">
-            <a-spin :spinning="exifDataLoading">
-              <div v-if="exifData && Object.keys(exifData).length">
-                <ExifBrowser :data="exifData" />
-              </div>
-              <div v-else-if="!exifDataLoading">
-                <a-empty description="No EXIF data available" />
-              </div>
-            </a-spin>
-          </a-tab-pane>
-        </a-tabs>
+            </v-window-item>
+            <v-window-item value="sourceText">
+              <code>{{ imageGenInfo }}</code>
+            </v-window-item>
+            <v-window-item value="exif">
+              <v-progress-circular indeterminate v-if="exifDataLoading" />
+              <template v-else>
+                <div v-if="exifData && Object.keys(exifData).length">
+                  <ExifBrowser :data="exifData" />
+                </div>
+                <div v-else>
+                  <div class="text-center pa-4 text-grey">No EXIF data available</div>
+                </div>
+              </template>
+            </v-window-item>
+          </v-window>
+        </template>
       </div>
     </div>
 

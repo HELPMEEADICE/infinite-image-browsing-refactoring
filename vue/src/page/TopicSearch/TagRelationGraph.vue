@@ -1,70 +1,78 @@
 <template>
   <div ref="fullscreenRef" class="tag-hierarchy-graph">
     <div v-if="loading" class="loading-container">
-      <a-spin size="large" />
+      <v-progress-circular indeterminate size="large" />
       <div class="loading-text">{{ t('tagGraphGenerating') }}</div>
     </div>
 
     <div v-else-if="error" class="error-container">
-      <a-alert type="error" :message="error" show-icon />
+      <v-alert color="error" :text="error" icon />
     </div>
 
     <div v-else-if="graphData" class="graph-container">
       <!-- Control Panel -->
       <div class="control-panel">
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <a-space>
-            <a-tag>{{ t('tagGraphStatLayers') }}: {{ displayGraphData?.layers?.length ?? 0 }}</a-tag>
-            <a-tag>{{ t('tagGraphStatNodes') }}: {{ displayNodeCount }}</a-tag>
-            <a-tag>{{ t('tagGraphStatLinks') }}: {{ displayLinkCount }}</a-tag>
-          </a-space>
+          <div class="d-flex ga-2">
+            <v-chip size="small">{{ t('tagGraphStatLayers') }}: {{ displayGraphData?.layers?.length ?? 0 }}</v-chip>
+            <v-chip size="small">{{ t('tagGraphStatNodes') }}: {{ displayNodeCount }}</v-chip>
+            <v-chip size="small">{{ t('tagGraphStatLinks') }}: {{ displayLinkCount }}</v-chip>
+          </div>
 
           <div style="flex: 1 1 auto;"></div>
 
           <!-- Filter Form (compact) -->
-          <a-space :size="8">
-            <a-select
-              v-model:value="filterLayer"
-              :options="layerOptions"
+          <div class="d-flex ga-2" style="align-items: center;">
+            <v-select
+              v-model="filterLayer"
+              :items="layerOptions"
               style="width: 140px;"
-              :getPopupContainer="(trigger: HTMLElement) => trigger.parentElement || trigger"
+              density="compact"
+              hide-details
             />
-            <a-input
-              v-model:value="filterKeyword"
+            <v-text-field
+              v-model="filterKeyword"
               style="width: 200px;"
-              allow-clear
+              clearable
               :placeholder="t('tagGraphFilterPlaceholder')"
               @keydown.enter="applyFilterManual"
+              density="compact"
+              hide-details
             />
-            <a-input-number
-              v-model:value="filterHops"
-              size="small"
+            <v-text-field
+              type="number"
+              v-model="filterHops"
+              density="compact"
               :min="1"
               :max="20"
-              :step="1"
+              step="1"
               style="width: 92px;"
               :title="t('tagGraphFilterHopsTitle')"
+              hide-details
             />
-            <a-input-number
-              v-model:value="filterKeywordLimit"
-              size="small"
+            <v-text-field
+              type="number"
+              v-model="filterKeywordLimit"
+              density="compact"
               :min="10"
               :max="1000"
-              :step="10"
+              step="10"
               style="width: 100px;"
               :title="t('tagGraphKeywordLimitTitle')"
+              hide-details
             />
-            <a-button size="small" @click="applyFilterManual">{{ t('tagGraphFilterApply') }}</a-button>
-            <a-button size="small" @click="resetFilter">{{ t('tagGraphFilterReset') }}</a-button>
-            <a-button
+            <v-btn size="small" density="compact" @click="applyFilterManual">{{ t('tagGraphFilterApply') }}</v-btn>
+            <v-btn size="small" density="compact" @click="resetFilter">{{ t('tagGraphFilterReset') }}</v-btn>
+            <v-btn
               size="small"
+              density="compact"
               :title="isFullscreen ? t('exitFullscreen') : t('fullscreen')"
               @click="toggleFullscreen"
             >
               <FullscreenExitOutlined v-if="isFullscreen" />
               <FullscreenOutlined v-else />
-            </a-button>
-          </a-space>
+            </v-btn>
+          </div>
         </div>
       </div>
 
@@ -78,7 +86,7 @@
 /* eslint-disable */
 import { computed, ref, onMounted, watch, nextTick, onUnmounted } from 'vue'
 import { getClusterTagGraph, getClusterTagGraphClusterPaths, type TagGraphReq, type TagGraphResp } from '@/api/db'
-import { message } from 'ant-design-vue'
+import { uiMessage } from '@/ui'
 import * as echarts from 'echarts'
 import { t } from '@/i18n'
 import { FullscreenExitOutlined, FullscreenOutlined } from '@/icon'
@@ -130,12 +138,12 @@ const toggleFullscreen = async () => {
     }
     const el = fullscreenRef.value
     if (!el || !(el as any).requestFullscreen) {
-      message.warning(t('tagGraphFullscreenUnsupported'))
+      uiMessage.warning(t('tagGraphFullscreenUnsupported'))
       return
     }
     await (el as any).requestFullscreen()
   } catch (e: any) {
-    message.error(e?.message || t('tagGraphFullscreenFailed'))
+    uiMessage.error(e?.message || t('tagGraphFullscreenFailed'))
   }
 }
 
@@ -194,7 +202,7 @@ const fetchGraphData = async () => {
         : detail
           ? JSON.stringify(detail)
           : (err.message || 'Failed to load graph')
-    message.error(error.value)
+    uiMessage.error(error.value)
   } finally {
     loading.value = false
   }
@@ -755,7 +763,7 @@ const renderChart = () => {
         const idx = _indexById[String(node.id || '')]
         if (idx != null) chartInstance?.dispatchAction({ type: 'showTip', seriesIndex: 0, dataIndex: idx })
       } else {
-        message.info(`Abstract category: ${params.name}`)
+        uiMessage.info(`Abstract category: ${params.name}`)
       }
     }
   })
@@ -787,7 +795,7 @@ const renderChart = () => {
         const nodeName = (nodes[idx] && nodes[idx].name) || ''
         if (nodeName) {
           emit('searchTag', nodeName)
-          message.info(`${t('search')}: ${nodeName}`)
+          uiMessage.info(`${t('search')}: ${nodeName}`)
         }
         hideTipOnly()
       } else if (action === 'filter' && idx != null) {
@@ -808,12 +816,12 @@ const renderChart = () => {
         const topicClusterCacheKey = String(displayGraphData.value?.stats?.topic_cluster_cache_key || '')
         const clusterId = String(meta.cluster_id || '')
         if (!topicClusterCacheKey || !clusterId) {
-          message.warning('Cluster data is incomplete, please re-generate clustering result')
+          uiMessage.warning('Cluster data is incomplete, please re-generate clustering result')
           hideTipOnly()
           return
         }
         void (async () => {
-          const hide = message.loading('Loading cluster images...', 0)
+          uiMessage.info('Loading cluster images...')
           try {
             const resp = await getClusterTagGraphClusterPaths({
               topic_cluster_cache_key: topicClusterCacheKey,
@@ -823,11 +831,10 @@ const renderChart = () => {
             if (paths.length) {
               emit('openCluster', { title, paths, size: size || paths.length })
             } else {
-              message.warning('No images found in this cluster')
+              uiMessage.warning('No images found in this cluster')
             }
             hideTipOnly()
           } finally {
-            hide?.()
           }
         })()
       } else if (action === 'close') {

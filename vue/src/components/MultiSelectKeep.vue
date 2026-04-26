@@ -24,13 +24,13 @@ const onKeepClick = () => {
 <template>
   <div class="float-panel" v-if="show">
     <div v-if="g.keepMultiSelect" class="select-actions">
-      <a-button size="small" @click="emit('selectAll')">{{ $t('select-all') }}</a-button>
-      <a-button size="small" @click="emit('reverseSelect')">{{ $t('rerverse-select') }}</a-button>
-      <a-button size="small" @click="emit('clearAllSelected')">{{ $t('clear-all-selected') }}</a-button>
-      <a-button size="small" @click="onExit">{{ $t('exit') }}</a-button>
+      <v-btn size="small" @click="emit('selectAll')">{{ $t('select-all') }}</v-btn>
+      <v-btn size="small" @click="emit('reverseSelect')">{{ $t('rerverse-select') }}</v-btn>
+      <v-btn size="small" @click="emit('clearAllSelected')">{{ $t('clear-all-selected') }}</v-btn>
+      <v-btn size="small" @click="onExit">{{ $t('exit') }}</v-btn>
     </div>
     <div v-else>
-      <a-button size="small" type="primary" @click="onKeepClick">{{ $t('keep-multi-selected') }}</a-button>
+      <v-btn size="small" color="primary" @click="onKeepClick">{{ $t('keep-multi-selected') }}</v-btn>
     </div>
   </div>
 </template>

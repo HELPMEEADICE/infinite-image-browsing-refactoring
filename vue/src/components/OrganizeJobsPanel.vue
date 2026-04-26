@@ -6,8 +6,9 @@
       class="organize-jobs-fab"
       @click="globalStore.showOrganizePanel = true"
     >
-      <span class="fab-icon">📁</span>
-      <a-badge :count="globalStore.activeOrganizeJobs.length" :offset="[-2, 2]" />
+      <v-badge :content="String(globalStore.activeOrganizeJobs.length)">
+        <span class="fab-icon">📁</span>
+      </v-badge>
     </div>
 
     <!-- 主面板 -->
@@ -15,8 +16,8 @@
     <div class="panel-header">
       <span class="panel-title">{{ t('organizeJobs') }}</span>
       <div class="panel-header-right">
-        <a-badge :count="globalStore.activeOrganizeJobs.length" />
-        <a-button type="text" size="small" class="close-btn" @click="globalStore.showOrganizePanel = false">✕</a-button>
+        <v-badge :content="String(globalStore.activeOrganizeJobs.length)" inline></v-badge>
+        <v-btn variant="text" size="small" class="close-btn" @click="globalStore.showOrganizePanel = false">✕</v-btn>
       </div>
     </div>
 
@@ -24,17 +25,17 @@
       <div class="job-header">
         <span class="job-icon">📁</span>
         <span class="job-folders">{{ formatFolders(job.folder_paths) }}</span>
-        <a-tag :color="statusColor(job.status)">{{ statusText(job.status) }}</a-tag>
+        <v-chip :color="statusColor(job.status)" size="small">{{ statusText(job.status) }}</v-chip>
       </div>
 
       <div class="job-progress">
         <!-- Clustering stage -->
         <template v-if="isClusteringStage(job)">
           <div class="stage-label">{{ stageText(job.progress?.stage) }}</div>
-          <a-progress
-            :percent="clusteringPercent(job.progress)"
-            :status="job.status === 'error' ? 'exception' : 'active'"
-            size="small"
+          <v-progress-linear
+            :model-value="clusteringPercent(job.progress)"
+            :color="job.status === 'error' ? 'error' : 'primary'"
+            height="4"
           />
         </template>
 
@@ -46,18 +47,18 @@
               clusters: job.preview?.clusters?.length ?? 0
             }) }}
           </div>
-          <a-button type="primary" size="small" @click="openPreview(job)">
+          <v-btn color="primary" size="small" @click="openPreview(job)">
             {{ t('viewPreview') }}
-          </a-button>
+          </v-btn>
         </template>
 
         <!-- Moving stage -->
         <template v-if="job.progress?.stage === 'moving'">
           <div class="stage-label">{{ t('movingFiles') }}</div>
-          <a-progress
-            :percent="movingPercent(job.progress)"
-            size="small"
-            status="active"
+          <v-progress-linear
+            :model-value="movingPercent(job.progress)"
+            height="4"
+            color="primary"
           />
           <div class="current-file" v-if="job.progress.current_file">
             {{ job.progress.current_file }}
@@ -72,7 +73,7 @@
               folders: job.progress?.created_folders?.length ?? 0
             }) }}
           </div>
-          <a-button size="small" @click="dismiss(job.job_id)">{{ t('close') }}</a-button>
+          <v-btn size="small" @click="dismiss(job.job_id)">{{ t('close') }}</v-btn>
         </template>
 
         <!-- Error -->
@@ -80,7 +81,7 @@
           <div class="result-summary error">
             {{ t('organizeFailed') }}
           </div>
-          <a-button size="small" @click="dismiss(job.job_id)">{{ t('close') }}</a-button>
+          <v-btn size="small" @click="dismiss(job.job_id)">{{ t('close') }}</v-btn>
         </template>
       </div>
     </div>

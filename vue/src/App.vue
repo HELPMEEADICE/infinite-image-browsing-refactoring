@@ -9,15 +9,18 @@ import OrganizeJobsPanel from '@/components/OrganizeJobsPanel.vue'
 import OrganizePreview from '@/page/OrganizeFiles/OrganizePreview.vue'
 import SmartOrganizeConfigModal from '@/components/SmartOrganizeConfigModal.vue'
 import PromptEditorModal from '@/components/PromptEditorModal.vue'
+import MediaModal from '@/components/MediaModal.vue'
+import TauriLaunchModal from '@/components/TauriLaunchModal.vue'
+import UiSnackbarHost from '@/ui/UiSnackbarHost.vue'
+import UiDialogHost from '@/ui/UiDialogHost.vue'
 import { Dict, createReactiveQueue, globalEvents, useGlobalEventListen } from './util'
 import { resolveQueryActions } from './queryActions'
 import { refreshTauriConf, tauriConf } from './util/tauriAppConf'
-import { openModal } from './taurilaunchModal'
 import { isTauri } from './util/env'
 import { delay } from 'vue3-ts-util'
 import { exportFn } from './defineExportFunc'
 import { debounce, once, cloneDeep } from 'lodash-es'
-import { message } from 'ant-design-vue'
+import { uiMessage } from './ui'
 import { t } from './i18n'
 import type { OrganizeFilesPreviewResp } from '@/api/organize'
 import { getOrganizeFilesStatus } from '@/api/organize'
@@ -71,12 +74,12 @@ const handleOrganizePreviewConfirmed = async () => {
         // Done - close loading, remove job, refresh view
         isMovingFiles.value = false
         globalStore.removeOrganizeJob(jobId)
-        message.success(t('organizeComplete'))
+        uiMessage.success(t('organizeComplete'))
         // Trigger refresh
         globalEvents.emit('refreshFileView', { paths: folderPaths })
       } else if (status.status === 'error') {
         isMovingFiles.value = false
-        message.error(`${t('organizeFailed')}: ${status.error}`)
+        uiMessage.error(`${t('organizeFailed')}: ${status.error}`)
       } else {
         // Still in other status, keep polling
         setTimeout(pollMoving, 500)
@@ -130,7 +133,7 @@ const restoreWorkspaceSnapshot = once( async () => {
       return
     }
     globalStore.tabList = cloneDeep(last.tabs)
-    message.success(t('restoreLastWorkspaceStateSuccess'))
+    uiMessage.success(t('restoreLastWorkspaceStateSuccess'))
   } else {
     const id = initPage.split('_')?.[2]
     const shot = wsStore.snapshots.find(v => v.id === id)
@@ -138,7 +141,7 @@ const restoreWorkspaceSnapshot = once( async () => {
       return
     }
     globalStore.tabList = cloneDeep(shot.tabs)
-    message.success(t('restoreWorkspaceSnapshotSuccess'))
+    uiMessage.success(t('restoreWorkspaceSnapshotSuccess'))
   }
 
 })
@@ -196,17 +199,10 @@ watch(
   () => globalStore.computedTheme === 'dark',
   async (enableDark) => {
     await delay()
-    const head = document.getElementsByTagName('html')[0] // html而不是head保证优先级    
     if (enableDark) {
       document.body.classList.add('dark')
-      const darkStyle = document.createElement('style')
-      const { default: css } = await import('ant-design-vue/dist/antd.dark.css?inline')
-      darkStyle.innerHTML = css
-      darkStyle.setAttribute('antd-dark', '')
-      head.appendChild(darkStyle)
     } else {
       document.body.classList.remove('dark')
-      Array.from(head.querySelectorAll('style[antd-dark]')).forEach((e) => e.remove())
     }
   },
   { immediate: true }
@@ -217,38 +213,36 @@ watch(() => globalStore.previewBgOpacity, (v) => {
 }, { immediate: true })
 
 onMounted(async () => {
-  if (isTauri) {
-    openModal()
-  }
   globalEvents.emit('updateGlobalSetting')
-
 })
 </script>
 
 <template>
-  <a-skeleton :loading="!queue.isIdle">
-    <SplitViewTab />
-  </a-skeleton>
+  <v-skeleton-loader v-if="!queue.isIdle" type="article" />
+  <SplitViewTab v-else />
+
+  <!-- Snackbar Host for uiMessage API -->
+  <UiSnackbarHost />
+
+  <!-- Dialog Host for uiDialog API -->
+  <UiDialogHost />
 
   <!-- Organize Jobs Progress Panel -->
   <OrganizeJobsPanel @open-preview="handleOpenOrganizePreview" />
 
   <!-- Organize Preview Modal -->
-  <a-modal
-    v-model:visible="showOrganizePreview"
-    :title="t('smartOrganizePreview')"
-    :footer="null"
-    :width="800"
-    :destroyOnClose="true"
-    :zIndex="2000"
-  >
-    <OrganizePreview
-      v-if="currentOrganizePreview"
-      :preview="currentOrganizePreview"
-      @cancel="handleOrganizePreviewCancel"
-      @confirmed="handleOrganizePreviewConfirmed"
-    />
-  </a-modal>
+  <v-dialog v-model="showOrganizePreview" :width="800" scrollable>
+    <v-card v-if="currentOrganizePreview">
+      <v-card-title>{{ t('smartOrganizePreview') }}</v-card-title>
+      <v-card-text>
+        <OrganizePreview
+          :preview="currentOrganizePreview"
+          @cancel="handleOrganizePreviewCancel"
+          @confirmed="handleOrganizePreviewConfirmed"
+        />
+      </v-card-text>
+    </v-card>
+  </v-dialog>
 
   <!-- Smart Organize Config Modal -->
   <SmartOrganizeConfigModal />
@@ -259,13 +253,19 @@ onMounted(async () => {
   <!-- Fullscreen Loading for Moving Files -->
   <div v-if="isMovingFiles" class="moving-files-overlay">
     <div class="moving-files-content">
-      <a-spin size="large" />
+      <v-progress-circular indeterminate size="48" color="white" />
       <div class="moving-text">{{ t('movingFiles') }}</div>
       <div class="moving-progress">
         {{ movingProgress.moved }} / {{ movingProgress.total }}
       </div>
     </div>
   </div>
+
+  <!-- Media Modal (video/audio playback with tags and prompt) -->
+  <MediaModal />
+
+  <!-- Tauri Launch Config Modal -->
+  <TauriLaunchModal v-if="isTauri" />
 </template>
 
 <style>

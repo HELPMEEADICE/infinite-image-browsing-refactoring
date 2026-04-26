@@ -12,13 +12,13 @@ import {
 import { type FileNodeInfo, deleteFiles, moveFiles, copyFiles } from '@/api/files'
 import { last, range, uniqueId } from 'lodash-es'
 import * as Path from '@/util/path'
-import { Checkbox, Modal, message } from 'ant-design-vue'
-import type { MenuInfo } from 'ant-design-vue/lib/menu/src/interface'
 import { t } from '@/i18n'
+import { uiDialog, uiMessage } from '@/ui'
+import type { ContextMenuInfo } from '@/components/ContextMenu.vue'
 import { batchUpdateImageTag, toggleCustomTagToImg } from '@/api/db'
 import { downloadFileInfoJSON, downloadFiles, toRawFileUrl } from '@/util/file'
 import { getShortcutStrFromEvent } from '@/util/shortcut'
-import { MultiSelectTips, openAddNewTagModal, openRenameFileModal } from '@/components/functionalCallableComp'
+import { openAddNewTagModal, openRenameFileModal } from '@/components/functionalCallableComp'
 import { batchDownload, events, imgTransferBus, stackCache, tagStore, useEventListen, useHookShareState, global } from '.'
 import { closeImageFullscreenPreview, openImageFullscreenPreview } from '@/util/imagePreviewOperation'
 import { openTiktokViewWithFiles } from '@/util/tiktokHelper'
@@ -96,7 +96,7 @@ export function useFileItemActions (
     }
   }
 
-  const onContextMenuClick = async (e: MenuInfo, file: FileNodeInfo, idx: number) => {
+  const onContextMenuClick = async (e: ContextMenuInfo, file: FileNodeInfo, idx: number) => {
     const url = toRawFileUrl(file)
     const path = currLocation.value
     const preset = { IIB_container_id: parent.IIB_container_id } 
@@ -129,7 +129,7 @@ export function useFileItemActions (
         imgTransferBus.postMessage({ ...preset, event: 'click_hidden_button', btnEleId: `iib_hidden_tab_${tab}` }) // 触发粘贴
       } catch (error) {
         console.error(error)
-        message.error('发送图像失败，请携带console的错误消息找开发者')
+        uiMessage.error('发送图像失败，请携带console的错误消息找开发者')
       } finally {
         spinning.value = false
       }
@@ -141,7 +141,7 @@ export function useFileItemActions (
       const { is_remove } = await toggleCustomTagToImg({ tag_id: tagId, img_path: file.fullpath })
       const tag = global.conf?.all_custom_tags.find((v) => v.id === tagId)?.name!
       await tagStore.refreshTags([file.fullpath])
-      message.success(t(is_remove ? 'removedTagFromImage' : 'addedTagToImage', { tag }))
+      uiMessage.success(t(is_remove ? 'removedTagFromImage' : 'addedTagToImage', { tag }))
       return
     } else if (key === 'add-custom-tag') {
       openAddNewTagModal()
@@ -155,7 +155,7 @@ export function useFileItemActions (
         action
       })
       await tagStore.refreshTags(paths)
-      message.success(t(action === 'add' ? 'addCompleted' : 'removeCompleted'))
+      uiMessage.success(t(action === 'add' ? 'addCompleted' : 'removeCompleted'))
       return 
     } else if (key.startsWith('copy-to-')){
       const targetPath = key.split('copy-to-')[1]
@@ -163,7 +163,7 @@ export function useFileItemActions (
       const paths = selectedFiles.map((v) => v.fullpath)
       await copyFiles(paths, targetPath, true)
       events.emit('addFiles', { files: selectedFiles, loc: targetPath })
-      message.success(t('copySuccess'))
+      uiMessage.success(t('copySuccess'))
       return
     } else if (key.startsWith('move-to-')){
       const targetPath = key.split('move-to-')[1]
@@ -172,7 +172,7 @@ export function useFileItemActions (
       await moveFiles(paths, targetPath, true)
       events.emit('removeFiles', { paths, loc: currLocation.value })
       events.emit('addFiles', { files: selectedFiles, loc: targetPath })
-      message.success(t('moveSuccess'))
+      uiMessage.success(t('moveSuccess'))
       return
     }
 
@@ -214,7 +214,7 @@ export function useFileItemActions (
       case 'send2savedDir': {
         const dir = global.quickMovePaths.find((v) => v.key === 'outdir_save')
         if (!dir) {
-          return message.error(t('unknownSavedDir'))
+          return uiMessage.error(t('unknownSavedDir'))
         }
         const absolutePath = Path.normalizeRelativePathToAbsolute(dir.dir, global.conf?.sd_cwd!)
         const selectedImg = getSelectedImg()
@@ -324,7 +324,7 @@ export function useFileItemActions (
         const removeFile = async () => {
           const paths = selectedFiles.map((v) => v.fullpath)
           await deleteFiles(paths)
-          message.success(t('deleteSuccess'))
+          uiMessage.success(t('deleteSuccess'))
           if (previewing.value) {
             const isFullscreenFirst = toRawFileUrl(file) === global.fullscreenPreviewInitialUrl
             const isEnd = previewIdx.value === sortedFiles.value.length - 1
@@ -342,25 +342,15 @@ export function useFileItemActions (
         if (selectedFiles.length === 1 && global.ignoredConfirmActions.deleteOneOnly) {
           return removeFile()
         }
-        await new Promise<void>((resolve) => {
-          Modal.confirm({
-            title: t('confirmDelete'),
-            maskClosable: true,
-            width: '60vw',
-            content:() =>
-              <div>
-                <ol style={{ maxHeight: '50vh', overflow: 'auto' }}>
-                  {selectedFiles.map((v) => <li>{v.fullpath.split(/[/\\]/).pop()}</li>)}
-                </ol>
-                <MultiSelectTips />
-                <Checkbox v-model:checked={global.ignoredConfirmActions.deleteOneOnly}>{t('deleteOneOnlySkipConfirm')} ({t('resetOnGlobalSettingsPage')})</Checkbox>
-              </div>,
-            async onOk () {
-              await removeFile()
-              resolve()
-            }
-          })
+        const confirmed = await uiDialog.confirm({
+          title: t('confirmDelete'),
+          message: selectedFiles.map((v) => v.fullpath.split(/[/\\]/).pop()).join('\n'),
+          danger: true,
+          maskClosable: true,
         })
+        if (confirmed) {
+          await removeFile()
+        }
         break
       }
     }
@@ -393,24 +383,24 @@ export function useFileItemActions (
         const file = sortedFiles.value[idx]
         switch (action) {
           case 'delete': {
-            return onContextMenuClick({ key: 'deleteFiles' } as MenuInfo, file, idx)
+            return onContextMenuClick({ key: 'deleteFiles' } as ContextMenuInfo, file, idx)
           }
           case 'download': {
-            return onContextMenuClick({ key: 'download' } as MenuInfo, file, idx)
+            return onContextMenuClick({ key: 'download' } as ContextMenuInfo, file, idx)
           }
           default: {
             const name = /^toggle_tag_(.*)$/.exec(action)?.[1]
             const tag = global.conf?.all_custom_tags.find((v) => v.name === name)
             if (tag) {
-              return onContextMenuClick({ key: `toggle-tag-${tag.id}` } as MenuInfo, file, idx)
+              return onContextMenuClick({ key: `toggle-tag-${tag.id}` } as ContextMenuInfo, file, idx)
             }
             if (action.startsWith('copy_to_')) {
               const path = action.split('copy_to_')[1]
-              return onContextMenuClick({ key: `copy-to-${path}` } as MenuInfo, file, idx)
+              return onContextMenuClick({ key: `copy-to-${path}` } as ContextMenuInfo, file, idx)
             }
             if (action.startsWith('move_to_')) {
               const path = action.split('move_to_')[1]
-              return onContextMenuClick({ key: `move-to-${path}` } as MenuInfo, file, idx)
+              return onContextMenuClick({ key: `move-to-${path}` } as ContextMenuInfo, file, idx)
               
             }
           }

@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import hljs from 'highlight.js/lib/core'
 import json from 'highlight.js/lib/languages/json'
 import { useGlobalStore } from '@/store/useGlobalStore'
-import { FolderOutlined } from '@ant-design/icons-vue'
+import MsIcon from '@/ui/MsIcon.vue'
 
 hljs.registerLanguage('json', json)
 
@@ -122,9 +122,9 @@ const formatKey = (key: string): string => {
           </span>
         </template>
       </div>
-      <a-button size="small" @click="resetToRoot">
+      <v-btn size="small" variant="text" @click="resetToRoot">
         {{ $t('reset') || 'Reset' }}
-      </a-button>
+      </v-btn>
     </div>
 
     <div class="exif-content">
@@ -133,10 +133,10 @@ const formatKey = (key: string): string => {
           <div class="exif-key">{{ formatKey(key) }}</div>
           <div class="exif-value">
             <div class="value-text" v-html="highlightJson(value)"></div>
-            <a-button v-if="isNavigableValue(value)"  type="text"
+            <v-btn v-if="isNavigableValue(value)" variant="text" size="small"
               @click="handleEnterNextLevel(String(key), value)">
-              <FolderOutlined style="font-size: 18px;" />
-            </a-button>
+              <MsIcon name="folder_open" :size="18" />
+            </v-btn>
           </div>
         </div>
       </template>
@@ -230,7 +230,7 @@ const formatKey = (key: string): string => {
           }
         }
 
-        .ant-btn-text {
+        :deep(.v-btn) {
           padding: 0 4px;
           color: var(--zp-luminous);
 

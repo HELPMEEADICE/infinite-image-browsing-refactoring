@@ -6,7 +6,7 @@ import { computed, ref } from 'vue'
 import { SearchSelect} from 'vue3-ts-util'
 import { sortMethodConv, sortMethods } from '@/page/fileTransfer/fileSort'
 import { relaunch } from '@tauri-apps/api/process'
-import { appConfFilename } from '@/taurilaunchModal'
+const appConfFilename = 'app.conf.json'
 import { fs, invoke } from '@tauri-apps/api'
 import { getShortcutStrFromEvent } from '@/util/shortcut'
 import { isTauri } from '@/util/env'
@@ -14,7 +14,7 @@ import ImageSetting from './ImageSetting.vue'
 import AutoTagSettings from './AutoTagSettings.vue'
 import { openRebuildImageIndexModal } from '@/components/functionalCallableComp'
 import { Dict } from '@/util'
-import { message } from 'ant-design-vue'
+import { uiMessage } from '@/ui'
 import { throttle, debounce } from 'lodash-es'
 import { useLocalStorage } from '@vueuse/core'
 import { prefix } from '@/util/const'
@@ -40,7 +40,7 @@ const doubleCheck = debounce((key: keyof Shortcut) => {
   }
 }, 700)
 const simpleKeyWarn = throttle(() => {
-  message.warn(t('notAllowSingleCtrlOrShiftAsShortcut'))
+  uiMessage.warning(t('notAllowSingleCtrlOrShiftAsShortcut'))
 }, 3000)
 const onShortcutKeyDown = (e: KeyboardEvent, key: keyof Shortcut) => {
   const keysStr = getShortcutStrFromEvent(e)
@@ -158,18 +158,18 @@ const presetShortcutGroups = computed(() => ([
 </script>
 <template>
   <div class="panel">
-    <a-alert :message="$t('readonlyModeSettingPageDesc')" v-if="globalStore.conf?.is_readonly" type="warning" />
-    <a-select v-if="false" />
-
-    <a-form>
-      <a-form-item :label="$t('lang')">
+    <v-alert :text="$t('readonlyModeSettingPageDesc')" v-if="globalStore.conf?.is_readonly" color="warning" icon />
+    <v-select v-if="false" hide-details />
+    <div>
+      <v-label class="d-flex align-center ga-4 mb-4">
+        {{ $t('lang') }}
         <div class="lang-select-wrap">
           <SearchSelect :options="langs" v-model:value="globalStore.lang" @change="langChanged = true" />
         </div>
-        <a-button type="primary" @click="reload" v-if="langChanged" ghost>{{
+        <v-btn color="primary" @click="reload" v-if="langChanged" variant="outlined">{{
           t('langChangeReload')
-          }}</a-button>
-      </a-form-item>
+          }}</v-btn>
+      </v-label>
       <h2 style="margin-top: 64px;">{{ t('ImageBrowsingSettings') }}</h2>
       <ImageSetting />
       
@@ -177,68 +177,82 @@ const presetShortcutGroups = computed(() => ([
       <AutoTagSettings />
 
       <h2>TikTok {{ t('view') }}</h2>
-      <a-form-item :label="$t('showTiktokNavigator')">
-        <a-switch v-model:checked="globalStore.showTiktokNavigator" />
+      <v-label class="d-flex align-center ga-4 mb-4">
+        {{ $t('showTiktokNavigator') }}
+        <v-switch v-model="globalStore.showTiktokNavigator" hide-details />
         <span style="margin-left: 8px;color: #666;">{{ t('showTiktokNavigatorDesc') }}</span>
-      </a-form-item>
+      </v-label>
 
       <h2>{{ t('imgSearch') }}</h2>
-      <a-form-item :label="$t('rebuildImageIndex')">
-        <AButton @click="openRebuildImageIndexModal">{{ $t('start') }}</AButton>
-      </a-form-item>
-      <a-form-item :label="$t('autoUpdateIndex')">
-        <a-switch v-model:checked="globalStore.autoUpdateIndex" />
+      <v-label class="d-flex align-center ga-4 mb-4">
+        {{ $t('rebuildImageIndex') }}
+        <v-btn @click="openRebuildImageIndexModal">{{ $t('start') }}</v-btn>
+      </v-label>
+      <v-label class="d-flex align-center ga-4 mb-4">
+        {{ $t('autoUpdateIndex') }}
+        <v-switch v-model="globalStore.autoUpdateIndex" hide-details />
         <span style="margin-left: 8px;color: #666;">{{ t('autoUpdateIndexDesc') }}</span>
-      </a-form-item>
+      </v-label>
 
       <h2>{{ t('autoRefresh') }}</h2>
-      <a-form-item :label="$t('autoRefreshWalkMode')">
-        <a-switch v-model:checked="globalStore.autoRefreshWalkMode" />
-      </a-form-item>
-      <a-form-item :label="$t('autoRefreshNormalFixedMode')">
-        <a-switch v-model:checked="globalStore.autoRefreshNormalFixedMode" />
-      </a-form-item>
-      <a-form-item :label="t('autoRefreshWalkModePosLimit')">
+      <v-label class="d-flex align-center ga-4 mb-4">
+        {{ $t('autoRefreshWalkMode') }}
+        <v-switch v-model="globalStore.autoRefreshWalkMode" hide-details />
+      </v-label>
+      <v-label class="d-flex align-center ga-4 mb-4">
+        {{ $t('autoRefreshNormalFixedMode') }}
+        <v-switch v-model="globalStore.autoRefreshNormalFixedMode" hide-details />
+      </v-label>
+      <v-label class="d-flex align-center ga-4 mb-4">
+        {{ t('autoRefreshWalkModePosLimit') }}
         <NumInput :min="0" :max="1024" :step="16" v-model="globalStore.autoRefreshWalkModePosLimit" />
-      </a-form-item>
+      </v-label>
 
       <h2 style="margin-top: 0;">{{ t('other') }}</h2>
-      <a-form-item :label="$t('fileTypeFilter')">
-        <a-checkbox-group v-model:value="globalStore.fileTypeFilter">
-          <a-checkbox value="all">{{ $t('allFiles') }}</a-checkbox>
-          <a-checkbox value="image">{{ $t('image') }}</a-checkbox>
-          <a-checkbox value="video">{{ $t('video') }}</a-checkbox>
-          <a-checkbox value="audio">{{ $t('audio') }}</a-checkbox>
-        </a-checkbox-group>
-      </a-form-item>
+      <v-label class="d-flex align-center ga-4 mb-4">
+        {{ $t('fileTypeFilter') }}
+        <div class="d-flex ga-2">
+          <v-checkbox :label="$t('allFiles')" value="all" v-model="globalStore.fileTypeFilter" hide-details />
+          <v-checkbox :label="$t('image')" value="image" v-model="globalStore.fileTypeFilter" hide-details />
+          <v-checkbox :label="$t('video')" value="video" v-model="globalStore.fileTypeFilter" hide-details />
+          <v-checkbox :label="$t('audio')" value="audio" v-model="globalStore.fileTypeFilter" hide-details />
+        </div>
+      </v-label>
       <!--在生成信息面板显示逗号-->
-      <a-form-item :label="$t('showCommaInGenInfoPanel')">
-        <a-switch v-model:checked="globalStore.showCommaInInfoPanel" />
-      </a-form-item>
-      <a-form-item :label="$t('showRandomImageInStartup')">
-        <a-switch v-model:checked="globalStore.showRandomImageInStartup" />
-      </a-form-item>
-      <a-form-item :label="$t('defaultSortingMethod')">
+      <v-label class="d-flex align-center ga-4 mb-4">
+        {{ $t('showCommaInGenInfoPanel') }}
+        <v-switch v-model="globalStore.showCommaInInfoPanel" hide-details />
+      </v-label>
+      <v-label class="d-flex align-center ga-4 mb-4">
+        {{ $t('showRandomImageInStartup') }}
+        <v-switch v-model="globalStore.showRandomImageInStartup" hide-details />
+      </v-label>
+      <v-label class="d-flex align-center ga-4 mb-4">
+        {{ $t('defaultSortingMethod') }}
         <search-select v-model:value="globalStore.defaultSortingMethod" :conv="sortMethodConv" :options="sortMethods" />
-      </a-form-item>
+      </v-label>
 
-      <a-form-item :label="$t('longPressOpenContextMenu')">
-        <a-switch v-model:checked="globalStore.longPressOpenContextMenu" />
-      </a-form-item>
-      <a-form-item :label="$t('openOnAppStart')">
+      <v-label class="d-flex align-center ga-4 mb-4">
+        {{ $t('longPressOpenContextMenu') }}
+        <v-switch v-model="globalStore.longPressOpenContextMenu" hide-details />
+      </v-label>
+      <v-label class="d-flex align-center ga-4 mb-4">
+        {{ $t('openOnAppStart') }}
         <search-select v-model:value="globalStore.defaultInitinalPage" :options="defaultInitinalPageOptions" />
-      </a-form-item>
-      <a-form-item :label="$t(key + 'SkipConfirm')" v-for="_, key in globalStore.ignoredConfirmActions" :key="key">
-        <ACheckbox v-model:checked="globalStore.ignoredConfirmActions[key]"></ACheckbox>
-      </a-form-item>
-      <a-form-item :label="$t('disableMaximize')">
-        <a-switch v-model:checked="disableMaximize" />
+      </v-label>
+      <v-label class="d-flex align-center ga-4 mb-4" v-for="_, key in globalStore.ignoredConfirmActions" :key="key">
+        {{ $t(key + 'SkipConfirm') }}
+        <v-checkbox v-model="globalStore.ignoredConfirmActions[key]" hide-details></v-checkbox>
+      </v-label>
+      <v-label class="d-flex align-center ga-4 mb-4">
+        {{ $t('disableMaximize') }}
+        <v-switch v-model="disableMaximize" hide-details />
         <sub style="padding-left: 8px;color: #666;">{{ $t('takeEffectAfterReloadPage') }}</sub>
-      </a-form-item>
+      </v-label>
 
       
 
-      <a-modal v-model:visible="showPresetShortcutModal" :title="t('shortcutPresetTitle')" width="800px" :footer="null">
+      <v-dialog v-model="showPresetShortcutModal" width="800px">
         <div class="shortcut-preset-desc">{{ t('shortcutPresetDesc') }}</div>
         <div class="shortcut-preset-section" v-for="group in presetShortcutGroups" :key="group.title">
           <div class="shortcut-preset-section-title">{{ group.title }}</div>
@@ -253,35 +267,36 @@ const presetShortcutGroups = computed(() => ([
             <div>{{ item.action }}</div>
           </div>
         </div>
-      </a-modal>      
+      </v-dialog>
       <div class="shortcut-title-row">
         <h2>{{ t('shortcutKey') }}</h2>
       </div>
-        <a-button type="link" @click="showPresetShortcutModal = true">
+        <v-btn variant="text" @click="showPresetShortcutModal = true">
           {{ t('shortcutPresetButton') }}
-        </a-button>
-      <a-form-item :label="item.label" v-for="item in shortcutsList" :key="item.key">
+        </v-btn>
+      <v-label class="d-flex align-center ga-4 mb-4" v-for="item in shortcutsList" :key="item.key">
+        {{ item.label }}
         <div class="col" :class="{ conflict: isShortcutConflict(globalStore.shortcut[item.key] + '') }"
 
           @keydown.stop.prevent>
-          <a-input :value="globalStore.shortcut[item.key]" @keydown.stop.prevent="onShortcutKeyDown($event, item.key)"
-            :placeholder="$t('shortcutKeyDescription')" />
-          <a-button @click="globalStore.shortcut[item.key] = ''" class="clear-btn">
+          <v-text-field :model-value="globalStore.shortcut[item.key]" @keydown.stop.prevent="onShortcutKeyDown($event, item.key)"
+            :placeholder="$t('shortcutKeyDescription')" hide-details />
+          <v-btn @click="globalStore.shortcut[item.key] = ''" class="clear-btn">
             {{ $t('clear') }}
-          </a-button>
+          </v-btn>
         </div>
-      </a-form-item>
+      </v-label>
       <template v-if="isTauri">
         <h2>{{ t('clientSpecificSettings') }}</h2>
-        <a-form-item>
+        <div class="d-flex align-center ga-4 mb-4">
           <div class="col">
-            <a-button @click="oninitTauriLaunchConf" class="clear-btn">
+            <v-btn @click="oninitTauriLaunchConf" class="clear-btn">
               {{ $t('initiateSoftwareStartupConfig') }}
-            </a-button>
+            </v-btn>
           </div>
-        </a-form-item>
+        </div>
       </template>
-    </a-form>
+    </div>
   </div>
 </template>
 <style lang="scss" scoped>

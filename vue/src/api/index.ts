@@ -1,13 +1,12 @@
-import { Modal, message } from 'ant-design-vue'
 import axios, { AxiosInstance, isAxiosError } from 'axios'
 import type { GlobalSettingPart } from './type'
 import { t } from '@/i18n'
 import type { ExtraPathModel, Tag } from './db'
 import cookie from 'js-cookie'
 import { delay } from 'vue3-ts-util'
-import { computed, h, ref } from 'vue'
-import 'ant-design-vue/es/input/style/index.css'
+import { computed } from 'vue'
 import sjcl from 'sjcl'
+import { uiDialog, uiMessage } from '@/ui'
 import { tauriConf } from '@/util/tauriAppConf'
 import { Dict, isSync } from '@/util'
 import { FileNodeInfo } from './files'
@@ -30,35 +29,12 @@ let isReloadingAfterAuth = false
 const promptServerKeyOnce = async (): Promise<string> => {
   if (pendingServerKeyPrompt) return pendingServerKeyPrompt
 
-  pendingServerKeyPrompt = new Promise<string>((resolve) => {
-    const key = ref('')
-
-    const finish = (v: string) => {
-      pendingServerKeyPrompt = null
-      resolve(v)
-    }
-
-    Modal.confirm({
-      title: t('serverKeyRequired'),
-      content: () =>
-        h('input', {
-          class: 'ant-input',
-          type: 'password',
-          value: key.value,
-          onInput: (e: any) => (key.value = e.target.value),
-          autocomplete: 'current-password',
-          name: 'password',
-          autocapitalize: 'off',
-          spellcheck: false,
-          style: 'width: 100%;'
-        }),
-      onOk () {
-        finish(key.value)
-      },
-      onCancel () {
-        finish('')
-      }
-    })
+  pendingServerKeyPrompt = uiDialog.prompt({
+    title: t('serverKeyRequired'),
+    message: t('serverKeyRequired'),
+    password: true,
+  }).finally(() => {
+    pendingServerKeyPrompt = null
   })
 
   return pendingServerKeyPrompt
@@ -90,10 +66,12 @@ const addInterceptor = (axiosInst: AxiosInstance) => {
 
         switch (err.response?.data?.detail?.type) {
           case 'secret_key_required':
-            Modal.error({
-              width: '60vw',
+            uiMessage.error(t('secretKeyRequiredWarnMsg'))
+            await uiDialog.confirm({
               title: t('secretKeyMustBeConfigured'),
-              content: () => h('p', { style: 'white-space: pre-line;' }, t('secretKeyRequiredWarnMsg'))
+              message: t('secretKeyRequiredWarnMsg'),
+              okText: 'OK',
+              cancelText: 'OK',
             })
             throw new Error(t('secretKeyRequiredWarnMsg'))
         }
@@ -106,7 +84,7 @@ const addInterceptor = (axiosInst: AxiosInstance) => {
           console.error(err.response, e)
         }
         errmsg ??= t('errorOccurred')
-        message.error(errmsg)
+        uiMessage.error(errmsg)
         throw new Error(errmsg)
       }
       return err

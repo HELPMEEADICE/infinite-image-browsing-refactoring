@@ -9,17 +9,17 @@ const sli = useImgSliStore()
 const splitpane = ref<{ requestFullScreen (): void }>()
 </script>
 <template>
-  <ADrawer width="100vw" v-model:visible="sli.drawerVisible" destroy-on-close class="img-sli" :close-icon="null">
-    <ImgSliSplitPane ref="splitpane" container="drawer" v-if="sli.left && sli.right" :left="sli.left"
-      :right="sli.right" />
-    <template #footer>
+  <v-dialog v-model="sli.drawerVisible" fullscreen class="img-sli">
+    <div>
+      <ImgSliSplitPane ref="splitpane" container="drawer" v-if="sli.left && sli.right" :left="sli.left"
+        :right="sli.right" />
       <div class="actions">
-        <AButton @click="sli.drawerVisible = false">{{ $t('close') }}</AButton>
-        <AButton @click="splitpane?.requestFullScreen()">{{ $t('fullscreenview') }}</AButton>
-        <a-alert banner style="height: 32px;" :message="'👇 ' + $t('scrollDownToComparePrompt')" type="info" show-icon />
+        <v-btn @click="sli.drawerVisible = false">{{ $t('close') }}</v-btn>
+        <v-btn @click="splitpane?.requestFullScreen()">{{ $t('fullscreenview') }}</v-btn>
+        <v-alert :text="'👇 ' + $t('scrollDownToComparePrompt')" color="info" icon />
       </div>
-    </template>
-  </ADrawer>
+    </div>
+  </v-dialog>
   <DraggingPort />
   <TiktokViewer />
 </template>

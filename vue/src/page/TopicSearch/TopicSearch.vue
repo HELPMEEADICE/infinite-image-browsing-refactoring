@@ -15,7 +15,7 @@ import { t } from '@/i18n'
 import { useGlobalStore } from '@/store/useGlobalStore'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { uniqueId } from 'lodash-es'
-import { message } from 'ant-design-vue'
+import { uiMessage } from '@/ui'
 import { isTauri } from '@/util/env'
 import { useLocalStorage } from '@vueuse/core'
 import TagRelationGraph from './TagRelationGraph.vue'
@@ -215,7 +215,7 @@ const pollJob = async () => {
   } else if (st.status === 'error') {
     stopJobPoll()
     loading.value = false
-    message.error(st.error || t('topicSearchJobFailed'))
+    uiMessage.error(st.error || t('topicSearchJobFailed'))
   }
 }
 
@@ -241,7 +241,7 @@ const loadCached = async () => {
 const refresh = async () => {
   if (g.conf?.is_readonly) return
   if (!scopeCount.value) {
-    message.warning(t('topicSearchNeedScope'))
+    uiMessage.warning(t('topicSearchNeedScope'))
     scopeOpen.value = true
     return
   }
@@ -275,7 +275,7 @@ const runQuery = async () => {
   if (!q) return
   if (qLoading.value) return
   if (!scopeCount.value) {
-    message.warning(t('topicSearchNeedScope'))
+    uiMessage.warning(t('topicSearchNeedScope'))
     scopeOpen.value = true
     return
   }
@@ -386,100 +386,97 @@ watch(
           <span class="icon">🧠</span>
           <span>{{ $t('topicSearchTitleExperimental') }}</span>
         </div>
-        <a-tag v-if="result" color="blue">共 {{ result.count }} 张</a-tag>
-        <a-tag v-if="result" color="geekblue">主题 {{ result.clusters.length }}</a-tag>
-        <a-tag v-if="result" color="default">噪声 {{ result.noise.length }}</a-tag>
+        <v-chip v-if="result" color="primary" size="small">共 {{ result.count }} 张</v-chip>
+        <v-chip v-if="result" color="indigo" size="small">主题 {{ result.clusters.length }}</v-chip>
+        <v-chip v-if="result" size="small">噪声 {{ result.noise.length }}</v-chip>
       </div>
       <div class="right">
-        <a-button @click="scopeOpen = true">
+        <v-btn @click="scopeOpen = true">
           {{ $t('topicSearchScope') }}
           <span v-if="scopeCount" style="opacity: 0.75;">（{{ scopeCount }}）</span>
-        </a-button>
-        <a-input
-          v-model:value="query"
+        </v-btn>
+        <v-text-field
+          v-model="query"
           style="width: min(420px, 72vw);"
           :placeholder="$t('topicSearchQueryPlaceholder')"
           :disabled="qLoading"
           @keydown.enter="runQuery"
-          allow-clear
+          clearable
+          density="compact"
+          hide-details
         />
-        <a-button :loading="qLoading" @click="runQuery">{{ $t('search') }}</a-button>
-        <a-button v-if="qResult?.results?.length" @click="openQueryResult">{{ $t('topicSearchOpenResults') }}</a-button>
+        <v-btn :loading="qLoading" @click="runQuery">{{ $t('search') }}</v-btn>
+        <v-btn v-if="qResult?.results?.length" @click="openQueryResult">{{ $t('topicSearchOpenResults') }}</v-btn>
         <span class="label">{{ $t('topicSearchThreshold') }}</span>
-        <a-input-number v-model:value="threshold" :min="0.5" :max="0.99" :step="0.01" />
+        <v-text-field type="number" v-model="threshold" :min="0.5" :max="0.99" step="0.01" density="compact" hide-details style="width: 96px;" />
         <span class="label">{{ $t('topicSearchMinClusterSize') }}</span>
-        <a-input-number v-model:value="minClusterSize" :min="1" :max="50" :step="1" />
-        <a-button type="primary" ghost :loading="loading" :disabled="g.conf?.is_readonly" @click="refresh">{{ $t('refresh') }}</a-button>
+        <v-text-field type="number" v-model="minClusterSize" :min="1" :max="50" step="1" density="compact" hide-details style="width: 80px;" />
+        <v-btn color="primary" variant="outlined" :loading="loading" :disabled="g.conf?.is_readonly" @click="refresh">{{ $t('refresh') }}</v-btn>
       </div>
     </div>
 
-    <a-alert
+    <v-alert
       v-if="g.conf?.is_readonly"
-      type="warning"
-      :message="$t('readonlyModeSettingPageDesc')"
+      color="warning"
+      :text="$t('readonlyModeSettingPageDesc')"
       style="margin: 12px 0;"
-      show-icon
+      icon
     />
 
-    <a-alert
-      v-if="showRequirements"
-      type="info"
-      show-icon
-      closable
-      style="margin: 10px 0 0 0;"
-      :message="$t('topicSearchRequirementsTitle')"
-      @close="hideRequirements"
-    >
-      <template #description>
-        <div style="display: grid; gap: 6px;">
-          <div>
-            <span style="margin-right: 6px;">🔑</span>
-            <span>{{ $t('topicSearchRequirementsOpenai') }}</span>
-          </div>
-          <template v-if="isTauri">
-            <div>
-              <span style="margin-right: 6px;">🧩</span>
-              <span>{{ $t('topicSearchRequirementsDepsDesktop') }}</span>
-            </div>
-          </template>
-          <template v-else>
-            <div>
-              <span style="margin-right: 6px;">🐍</span>
-              <span>{{ $t('topicSearchRequirementsDepsPython') }}</span>
-            </div>
-            <div style="opacity: 0.85;">
-              <span style="margin-right: 6px;">💻</span>
-              <span>{{ $t('topicSearchRequirementsInstallCmd') }}</span>
-            </div>
-          </template>
+    <div v-if="showRequirements" style="margin: 10px 0 0 0; background: var(--zp-secondary-background); border-left: 4px solid var(--info-color); border-radius: 4px; padding: 12px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+        <strong>{{ $t('topicSearchRequirementsTitle') }}</strong>
+        <v-btn size="small" variant="text" icon @click="hideRequirements"><v-icon>close</v-icon></v-btn>
+      </div>
+      <div style="display: grid; gap: 6px;">
+        <div>
+          <span style="margin-right: 6px;">🔑</span>
+          <span>{{ $t('topicSearchRequirementsOpenai') }}</span>
         </div>
-      </template>
-    </a-alert>
+        <template v-if="isTauri">
+          <div>
+            <span style="margin-right: 6px;">🧩</span>
+            <span>{{ $t('topicSearchRequirementsDepsDesktop') }}</span>
+          </div>
+        </template>
+        <template v-else>
+          <div>
+            <span style="margin-right: 6px;">🐍</span>
+            <span>{{ $t('topicSearchRequirementsDepsPython') }}</span>
+          </div>
+          <div style="opacity: 0.85;">
+            <span style="margin-right: 6px;">💻</span>
+            <span>{{ $t('topicSearchRequirementsInstallCmd') }}</span>
+          </div>
+        </template>
+      </div>
+    </div>
 
     <!-- Stale cache banner -->
     <div
       v-if="cacheInfo?.cache_hit && cacheInfo?.stale && !cacheResultCollapsed"
       style="margin: 10px 0 0 0; position: relative;"
     >
-      <a-alert
-        type="warning"
-        show-icon
-        :message="$t('topicSearchCacheStale')"
-        :description="$t('topicSearchCacheStaleDesc')"
+      <v-alert
+        color="warning"
+        icon
+        :text="$t('topicSearchCacheStale')"
       >
-        <template #action>
-          <a-button size="small" :loading="loading || jobRunning" :disabled="g.conf?.is_readonly" @click="refresh">
+        {{ $t('topicSearchCacheStaleDesc') }}
+        <template #append>
+          <v-btn size="small" density="compact" :loading="loading || jobRunning" :disabled="g.conf?.is_readonly" @click="refresh">
             {{ $t('topicSearchCacheUpdate') }}
-          </a-button>
+          </v-btn>
         </template>
-      </a-alert>
-      <a-button
+      </v-alert>
+      <v-btn
         size="small"
+        density="compact"
         style="position: absolute; top: 8px; right: 8px; z-index: 1;"
         @click="collapseCacheResult"
       >
         ^
-      </a-button>
+      </v-btn>
     </div>
 
     <!-- Collapsed stale cache -->
@@ -488,15 +485,15 @@ watch(
       style="margin: 10px 0 0 0; padding: 8px 12px; background: #fffbe6; border: 1px solid #ffe58f; border-radius: 8px; display: flex; align-items: center; gap: 10px;"
     >
       <span>💾</span>
-      <a-button size="small" :loading="loading || jobRunning" :disabled="g.conf?.is_readonly" @click="refresh">
+      <v-btn size="small" density="compact" :loading="loading || jobRunning" :disabled="g.conf?.is_readonly" @click="refresh">
         {{ $t('topicSearchCacheUpdate') }}
-      </a-button>
+      </v-btn>
       <div style="flex: 1;">
 
       </div>
-      <a-button size="small" @click="expandCacheResult"  >
+      <v-btn size="small" density="compact" @click="expandCacheResult"  >
         v
-      </a-button>
+      </v-btn>
     </div>
 
     <!-- Fresh cache banner -->
@@ -504,18 +501,19 @@ watch(
       v-if="cacheInfo?.cache_hit && !cacheInfo?.stale && !cacheResultCollapsed"
       style="margin: 10px 0 0 0; position: relative;"
     >
-      <a-alert
-        type="success"
-        show-icon
-        :message="$t('topicSearchCacheHit')"
+      <v-alert
+        color="success"
+        icon
+        :text="$t('topicSearchCacheHit')"
       />
-      <a-button
+      <v-btn
         size="small"
+        density="compact"
         style="position: absolute; top: 8px; right: 8px; z-index: 1;"
         @click="collapseCacheResult"
       >
         ^
-      </a-button>
+      </v-btn>
     </div> -->
 
     <!-- Collapsed fresh cache -->
@@ -524,36 +522,37 @@ watch(
       style="margin: 10px 0 0 0; padding: 8px 12px; background: #f6ffed; border: 1px solid #b7eb8f; border-radius: 8px; display: flex; align-items: center; gap: 10px;"
     >
       <span>✅</span>
-      <a-button size="small" @click="expandCacheResult">
+      <v-btn size="small" density="compact" @click="expandCacheResult">
         v
-      </a-button>
+      </v-btn>
     </div> -->
 
     <div v-if="jobRunning" style="margin: 10px 0 0 0;">
-      <a-alert type="info" show-icon :message="jobStageText" :description="jobDesc" />
-      <a-progress :percent="jobPercent" size="small" style="margin-top: 8px;" />
+      <v-alert color="info" icon :text="jobStageText" />
+      <v-progress-linear :model-value="jobPercent" style="margin-top: 8px;" />
     </div>
 
     <!-- View Switcher -->
     <div style="margin : 10px 0; display: flex; align-items: center; gap: 8px;">
       <span style="font-size: 13px; color: #666;">View:</span>
-      <a-switch
-        v-model:checked="activeTab"
-        :checked-value="'graph'"
-        :un-checked-value="'clusters'"
-        checked-children="Tag Graph"
-        un-checked-children="Clusters"
+      <v-switch
+        v-model="activeTab"
+        true-value="graph"
+        false-value="clusters"
+        :label="activeTab === 'graph' ? 'Tag Graph' : 'Clusters'"
+        hide-details
       />
     </div>
 
     <!-- Cluster Cards View -->
     <div v-if="activeTab === 'clusters'">
-      <a-spin :spinning="loading">
+      <v-progress-circular indeterminate v-if="loading" />
+      <template v-else>
         <div v-if="qResult" style="margin-top: 10px;">
-          <a-alert
-            type="info"
-            :message="$t('topicSearchRecallMsg', [qResult.results.length, qResult.count, qResult.top_k])"
-            show-icon
+          <v-alert
+            color="info"
+            :text="$t('topicSearchRecallMsg', [qResult.results.length, qResult.count, qResult.top_k])"
+            icon
           />
         </div>
         <div class="grid" v-if="clusters.length">
@@ -567,10 +566,10 @@ watch(
         </div>
 
         <div class="empty" v-else>
-        <a-alert
-          type="info"
-          show-icon
-          :message="$t('topicSearchGuideTitle')"
+        <v-alert
+          color="info"
+          icon
+          :text="$t('topicSearchGuideTitle')"
           style="margin-bottom: 10px;"
         />
 
@@ -578,12 +577,12 @@ watch(
           <div class="guide-row">
             <span class="guide-icon">🗂️</span>
             <span class="guide-text">{{ $t('topicSearchGuideStep1') }}</span>
-            <a-button size="small" @click="scopeOpen = true">{{ $t('topicSearchScope') }}</a-button>
+            <v-btn size="small" density="compact" @click="scopeOpen = true">{{ $t('topicSearchScope') }}</v-btn>
           </div>
           <div class="guide-row">
             <span class="guide-icon">🧠</span>
             <span class="guide-text">{{ $t('topicSearchGuideStep2') }}</span>
-            <a-button size="small" :loading="loading" :disabled="g.conf?.is_readonly" @click="refresh">{{ $t('refresh') }}</a-button>
+            <v-btn size="small" density="compact" :loading="loading" :disabled="g.conf?.is_readonly" @click="refresh">{{ $t('refresh') }}</v-btn>
           </div>
           <div class="guide-row">
             <span class="guide-icon">🔎</span>
@@ -606,7 +605,7 @@ watch(
           </div>
         </div>
       </div>
-      </a-spin>
+      </template>
     </div>
 
     <!-- Tag Graph View -->
@@ -619,41 +618,44 @@ watch(
       />
     </div>
 
-    <a-modal
-      v-model:visible="scopeOpen"
-      :title="$t('topicSearchScopeModalTitle')"
-      :mask-closable="true"
-      @ok="
-        () => {
-          scopeOpen = false
-          void saveScopeToBackend()
-        }
-      "
+    <v-dialog
+      v-model="scopeOpen"
+      width="auto"
+      @click:outside="scopeOpen = false"
     >
-      <a-alert
-        type="info"
-        show-icon
-        :message="$t('topicSearchScopeTip')"
-        style="margin-bottom: 10px;"
-      />
-      <a-alert
-        v-if="_saving"
-        type="info"
-        show-icon
-        :message="$t('topicSearchSavingToBackend')"
-        style="margin-bottom: 10px;"
-      />
-      <a-select
-        v-model:value="selectedFolders"
-        mode="multiple"
-        style="width: 100%;"
-        :options="folderOptions"
-        :placeholder="$t('topicSearchScopePlaceholder')"
-        :max-tag-count="3"
-        :getPopupContainer="(trigger: HTMLElement) => trigger.parentElement || trigger"
-        allow-clear
-      />
-    </a-modal>
+      <v-card>
+        <v-card-title>{{ $t('topicSearchScopeModalTitle') }}</v-card-title>
+        <v-card-text>
+          <v-alert
+            color="info"
+            icon
+            :text="$t('topicSearchScopeTip')"
+            style="margin-bottom: 10px;"
+          />
+          <v-alert
+            v-if="_saving"
+            color="info"
+            icon
+            :text="$t('topicSearchSavingToBackend')"
+            style="margin-bottom: 10px;"
+          />
+          <v-select
+            v-model="selectedFolders"
+            multiple
+            style="width: 100%;"
+            :items="folderOptions"
+            :placeholder="$t('topicSearchScopePlaceholder')"
+            chips
+            closable-chips
+            clearable
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" @click="scopeOpen = false; void saveScopeToBackend()">{{ $t('ok') }}</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 

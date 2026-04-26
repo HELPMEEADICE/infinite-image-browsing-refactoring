@@ -3,7 +3,7 @@ import { useGlobalStore } from '@/store/useGlobalStore'
 import { useWorkspeaceSnapshot, Snapshot } from '@/store/useWorkspeaceSnapshot'
 import { cloneDeep } from 'lodash-es'
 import { removeAppFeSetting } from '@/api'
-import { message } from 'ant-design-vue'
+import { uiMessage } from '@/ui'
 import { t } from '@/i18n'
 import { ref } from 'vue'
 import { actionConfirm } from '@/util'
@@ -25,20 +25,20 @@ const onRemove = actionConfirm(async (snap: Snapshot) => {
   
   await removeAppFeSetting(`workspace_snapshot_${snap.id}`)
   store.snapshots = store.snapshots.filter(item => item.id !== snap.id)
-  message.success(t('deleteSuccess'))
+  uiMessage.success(t('deleteSuccess'))
 })
 
 const name = ref('')
 
 const onCreate = async () => {
   if (!name.value) {
-    message.error(t('nameRequired'))
+    uiMessage.error(t('nameRequired'))
     return
 
   }
   const snap = store.createSnapshot(name.value)
   await store.addSnapshot(snap)
-  message.success(t('saveCompleted'))
+  uiMessage.success(t('saveCompleted'))
 
 }
 
@@ -46,8 +46,8 @@ const onCreate = async () => {
 <template>
   <div class="container">
     <div class="actions">
-      <a-input v-model:value="name" :placeholder="$t('name')" style="max-width: 300px;" />
-      <a-button type="primary" @click="onCreate">{{ $t('saveWorkspaceSnapshot') }}</a-button>
+      <v-text-field v-model="name" :placeholder="$t('name')" style="max-width: 300px;" hide-details />
+      <v-btn color="primary" @click="onCreate">{{ $t('saveWorkspaceSnapshot') }}</v-btn>
     </div>
     <p class="uni-desc">
      {{ $t('WorkspaceSnapshotDesc') }}
@@ -58,8 +58,8 @@ const onCreate = async () => {
           <span>{{ item.name }}</span>
         </div>
         <div>
-          <a-button @click="onRestore(item)">{{ $t('restore') }}</a-button>
-          <a-button @click="onRemove(item)">{{ $t('remove') }}</a-button>
+          <v-btn @click="onRestore(item)">{{ $t('restore') }}</v-btn>
+          <v-btn @click="onRemove(item)">{{ $t('remove') }}</v-btn>
         </div>
       </li>
     </ul>

@@ -121,10 +121,7 @@ const onTiktokViewClick = () => {
       @select-all="onSelectAll"
       @reverse-select="onReverseSelect"
     />
-    <ASpin size="large" :spinning="!queue.isIdle || iter.loading">
-      <AModal v-model:visible="showGenInfo" width="70vw" mask-closable @ok="showGenInfo = false">
-        <template #cancelText />
-        <ASkeleton active :loading="!genInfoQueue.isIdle">
+      <v-dialog v-model="showGenInfo" width="70vw" @click:outside="showGenInfo = false">
           <div
             style="
               width: 100%;
@@ -138,15 +135,14 @@ const onTiktokViewClick = () => {
             <div class="hint">{{ $t('doubleClickToCopy') }}</div>
             {{ imageGenInfo }}
           </div>
-        </ASkeleton>
-      </AModal>
+      </v-dialog>
 
       <div class="action-bar">
         <div class="title line-clamp-1">🧩 {{ props.title }}</div>
         <div flex-placeholder />
-        <a-button @click="onTiktokViewClick" :disabled="!images?.length">{{ $t('tiktokView') }}</a-button>
-        <a-button @click="saveLoadedFileAsJson" :disabled="!images?.length">{{ $t('saveLoadedImageAsJson') }}</a-button>
-        <a-button @click="saveAllFileAsJson" :disabled="!images?.length">{{ $t('saveAllAsJson') }}</a-button>
+        <v-btn @click="onTiktokViewClick" :disabled="!images?.length">{{ $t('tiktokView') }}</v-btn>
+        <v-btn @click="saveLoadedFileAsJson" :disabled="!images?.length">{{ $t('saveLoadedImageAsJson') }}</v-btn>
+        <v-btn @click="saveAllFileAsJson" :disabled="!images?.length">{{ $t('saveAllAsJson') }}</v-btn>
       </div>
 
       <RecycleScroller
@@ -194,7 +190,6 @@ const onTiktokViewClick = () => {
         <LeftCircleOutlined @click="previewImgMove('prev')" :class="{ disable: !canPreview('prev') }" />
         <RightCircleOutlined @click="previewImgMove('next')" :class="{ disable: !canPreview('next') }" />
       </div>
-    </ASpin>
 
     <fullScreenContextMenu
       v-if="previewing && images && images[previewIdx]"

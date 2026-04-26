@@ -17,7 +17,7 @@ import { PlusOutlined, ArrowRightOutlined } from '@/icon'
 import { useGlobalStore } from '@/store/useGlobalStore'
 import { groupBy, uniqueId, debounce, cloneDeep } from 'lodash-es'
 import { createReactiveQueue, type Dict, useGlobalEventListen } from '@/util'
-import { Modal, message } from 'ant-design-vue'
+import { uiMessage, uiDialog } from '@/ui'
 import { t } from '@/i18n'
 import { makeAsyncFunctionSingle } from '@/util'
 import TagSearchItem from './TagSearchItem.vue'
@@ -140,10 +140,10 @@ const onAddTagBtnSubmit = async () => {
   }
   const tag = await queue.pushAction(() => addCustomTag({ tag_name: addTagName.value })).res
   if (tag.type !== 'custom') {
-    message.error(t('existInOtherType'))
+    uiMessage.error(t('existInOtherType'))
   }
   if (info.value?.tags.find((v) => v.id === tag.id)) {
-    message.error(t('alreadyExists'))
+    uiMessage.error(t('alreadyExists'))
   } else {
     info.value?.tags.push(tag)
     global.conf?.all_custom_tags.push(tag)
@@ -151,19 +151,16 @@ const onAddTagBtnSubmit = async () => {
   addTagName.value = ''
   addInputing.value = false
 }
-const onTagRemoveClick = (tagId: TagId) => {
-  Modal.confirm({
-    title: t('confirmDelete'),
-    async onOk () {
-      await removeCustomTag({ tag_id: tagId })
-      const idx = info.value?.tags.findIndex((v) => v.id === tagId) ?? -1
-      info.value?.tags.splice(idx, 1)
-      global.conf?.all_custom_tags.splice(
-        global.conf?.all_custom_tags.findIndex((v) => v.id === tagId),
-        1
-      )
-    }
-  })
+const onTagRemoveClick = async (tagId: TagId) => {
+  const ok = await uiDialog.confirm({ title: t('confirmDelete'), message: '' })
+  if (!ok) return
+  await removeCustomTag({ tag_id: tagId })
+  const idx = info.value?.tags.findIndex((v) => v.id === tagId) ?? -1
+  info.value?.tags.splice(idx, 1)
+  global.conf?.all_custom_tags.splice(
+    global.conf?.all_custom_tags.findIndex((v) => v.id === tagId),
+    1
+  )
 }
 const selectedTagIds = computed(
   () => new Set([matchIds.value.and_tags, matchIds.value.or_tags, matchIds.value.not_tags].flat())
@@ -217,59 +214,64 @@ const tagIdsToString = (tagIds: TagId[]) => {
 </script>
 <template>
   <div class="container">
-    
-  <a-modal v-model:visible="showHistoryRecord" width="70vw" mask-closable @ok="showHistoryRecord = false">
-    <HistoryRecord :records="tagSearchHistory" @reuse-record="reuse">
-      <template #default="{ record }">
-        <div style="padding-right: 16px;">
-          <a-row v-if="record.and_tags.length">
-            <a-col :span="4">{{ $t('exactMatch') }}:</a-col>
-            <a-col :span="20">{{ tagIdsToString(record.and_tags) }}</a-col>
-          </a-row>
-          <a-row v-if="record.or_tags.length">
-            <a-col :span="4">{{ $t('anyMatch') }}:</a-col>
-            <a-col :span="20">{{ tagIdsToString(record.or_tags) }}</a-col>
-          </a-row>
-          <a-row v-if="record.not_tags.length">
-            <a-col :span="4">{{ $t('exclude') }}:</a-col>
-            <a-col :span="20">{{ tagIdsToString(record.not_tags) }}</a-col>
-          </a-row>
-          <a-row v-if="record.folder_paths_str">
-            <a-col :span="4">{{ $t('searchScope') }}:</a-col>
-            <a-col :span="20">{{ record.folder_paths_str }}</a-col>
-          </a-row>
-          <a-row>
-            <a-col :span="4">{{ $t('time') }}:</a-col>
-            <a-col :span="20">{{ record.time }}</a-col>
-          </a-row>
-          <div>
-          </div>
-        </div>
-      </template>
-    </HistoryRecord>
-  </a-modal>
-    <ASelect v-if="false" />
+
+  <v-dialog v-model="showHistoryRecord" width="70vw" @click:outside="showHistoryRecord = false">
+    <v-card>
+      <v-card-text>
+        <HistoryRecord :records="tagSearchHistory" @reuse-record="reuse">
+          <template #default="{ record }">
+            <div style="padding-right: 16px;">
+              <div v-if="record.and_tags.length" style="display: flex;">
+                <div style="flex: 0 0 auto; padding-right: 16px;">{{ $t('exactMatch') }}:</div>
+                <div>{{ tagIdsToString(record.and_tags) }}</div>
+              </div>
+              <div v-if="record.or_tags.length" style="display: flex;">
+                <div style="flex: 0 0 auto; padding-right: 16px;">{{ $t('anyMatch') }}:</div>
+                <div>{{ tagIdsToString(record.or_tags) }}</div>
+              </div>
+              <div v-if="record.not_tags.length" style="display: flex;">
+                <div style="flex: 0 0 auto; padding-right: 16px;">{{ $t('exclude') }}:</div>
+                <div>{{ tagIdsToString(record.not_tags) }}</div>
+              </div>
+              <div v-if="record.folder_paths_str" style="display: flex;">
+                <div style="flex: 0 0 auto; padding-right: 16px;">{{ $t('searchScope') }}:</div>
+                <div>{{ record.folder_paths_str }}</div>
+              </div>
+              <div style="display: flex;">
+                <div style="flex: 0 0 auto; padding-right: 16px;">{{ $t('time') }}:</div>
+                <div>{{ record.time }}</div>
+              </div>
+              <div>
+              </div>
+            </div>
+          </template>
+        </HistoryRecord>
+      </v-card-text>
+    </v-card>
+  </v-dialog>
+    <v-select v-if="false" />
     <template v-if="info">
-      <a-alert
-        v-if="!showAutoUpdateFeatureTip"
-        type="info"
-        show-icon
-        :message="$t('autoUpdateFeatureTip')"
-        style="margin-bottom: 8px;"
-        closable
-        @close="showAutoUpdateFeatureTip = true"
-      >
-        <template #action>
-          <a-button size="small" type="link" @click="showAutoUpdateFeatureTip = true">
-            {{ $t('gotIt') }}
-          </a-button>
-        </template>
-      </a-alert>
-      <a-alert
+      <div style="position: relative; margin-bottom: 8px;">
+        <v-alert
+          v-if="!showAutoUpdateFeatureTip"
+          color="info"
+          icon
+          :text="$t('autoUpdateFeatureTip')"
+          closable
+          @click:close="showAutoUpdateFeatureTip = true"
+        >
+          <template #append>
+            <v-btn size="small" variant="text" @click="showAutoUpdateFeatureTip = true">
+              {{ $t('gotIt') }}
+            </v-btn>
+          </template>
+        </v-alert>
+      </div>
+      <v-alert
         v-if="info.expired && !global.autoUpdateIndex"
-        type="warning"
-        show-icon
-        :message="$t('indexExpiredManualUpdate')"
+        color="warning"
+        icon
+        :text="$t('indexExpiredManualUpdate')"
         style="margin-bottom: 8px;"
         closable
       />
@@ -278,18 +280,18 @@ const tagIdsToString = (tagIds: TagId[]) => {
           <div class="form-name">{{ $t('exactMatch') }}</div>
           <SearchSelect :conv="conv" mode="multiple" style="width: 100%" :options="tags"
             v-model:value="matchIds.and_tags" :disabled="!tags.length" :placeholder="$t('selectExactMatchTag')" />
-          <AButton @click="onUpdateBtnClick" :loading="!queue.isIdle" type="primary"
+          <v-btn @click="onUpdateBtnClick" :loading="!queue.isIdle" color="primary"
             v-if="!info.img_count">
-            {{ $t('generateIndexHint') }}</AButton>
+            {{ $t('generateIndexHint') }}</v-btn>
           <template v-else>
-            <AButton type="primary" @click="query" :loading="!queue.isIdle">{{
+            <v-btn color="primary" @click="query" :loading="!queue.isIdle">{{
         $t('search') }}
-            </AButton>
-            <AButton @click="onUpdateBtnClick" :loading="!queue.isIdle"
+            </v-btn>
+            <v-btn @click="onUpdateBtnClick" :loading="!queue.isIdle"
               v-if="info.expired && !global.autoUpdateIndex"
               style="margin-left: 8px;">
               {{ $t('UpdateIndex') }}
-            </AButton>
+            </v-btn>
           </template>
         </div>
         <div class="search-bar">
@@ -297,7 +299,7 @@ const tagIdsToString = (tagIds: TagId[]) => {
           <SearchSelect :conv="conv" mode="multiple" style="width: 100%" :options="tags"
             v-model:value="matchIds.or_tags" :disabled="!tags.length" :placeholder="$t('selectAnyMatchTag')" />
             <div style="padding-left: 4px"></div>
-            <AButton @click="showHistoryRecord = true">{{ $t('history') }}</AButton>
+            <v-btn @click="showHistoryRecord = true">{{ $t('history') }}</v-btn>
         </div>
         <div class="search-bar">
           <div class="form-name">{{ $t('exclude') }}</div>
@@ -306,8 +308,8 @@ const tagIdsToString = (tagIds: TagId[]) => {
         </div>
         <div class="search-bar">
           <div class="form-name">{{ $t('searchScope') }}</div>
-          <ATextarea :auto-size="{ maxRows: 8 }" v-model:value="matchIds.folder_paths_str"
-            :placeholder="$t('specifiedSearchFolder')" />
+          <v-textarea auto-grow :max-rows="8" v-model="matchIds.folder_paths_str"
+            :placeholder="$t('specifiedSearchFolder')" hide-details />
         </div>
       </div>
 
@@ -325,36 +327,37 @@ const tagIdsToString = (tagIds: TagId[]) => {
             <ArrowRightOutlined class="arrow" :class="{ down: openedKeys.includes(name) }" />
             {{ $t(name) }}
             <div @click.stop.prevent class="filter-input">
-              <a-input v-model:value="tagClassSearch[name]" size="small" allowClear
-                :placeholder="$t('filterByKeyword')" />
+              <v-text-field v-model="tagClassSearch[name]" density="compact" clearable
+                :placeholder="$t('filterByKeyword')" hide-details />
             </div>
           </h3>
-          <a-collapse ghost v-model:activeKey="openedKeys">
-            <template #expandIcon></template>
-            <a-collapse-panel :key="name">
-              <tag-search-item @click="onTagClick(tag)" @remove="onTagRemoveClick(tag.id)"
-                @TagColorChange="onTagColorChange(tag, $event)"
-                @toggle-and="toggleTag(tag.id, matchIds.and_tags)" @toggle-or="toggleTag(tag.id, matchIds.or_tags)"
-                @toggle-not="toggleTag(tag.id, matchIds.not_tags)" v-for="(tag, idx) in tagListFilter(list, name)"
-                :key="tag.id" :idx="idx" :name="name" :tag="tag" :selected="selectedTagIds.has(tag.id)" />
-              <li v-if="name === 'custom'" class="tag" @click="addInputing = true">
-                <template v-if="addInputing">
-                  <a-input-group compact>
-                    <a-input v-model:value="addTagName" style="width: 128px" :loading="loading" allow-clear
-                      size="small" />
-                    <a-button size="small" type="primary" @click.capture.stop="onAddTagBtnSubmit" :loading="loading">{{
-      addTagName ? $t('submit') : $t('cancel') }}</a-button>
-                  </a-input-group>
-                </template>
-                <template v-else>
-                  <PlusOutlined /> {{ $t('add') }}
-                </template>
-              </li>
-              <div v-if="getTagMaxNum(name) < list.length">
-                <a-button block @click="tagMaxNum.set(name, getTagMaxNum(name) + 512)">{{ $t('loadmore') }}</a-button>
-              </div>
-            </a-collapse-panel>
-          </a-collapse>
+          <v-expansion-panels v-model="openedKeys" flat multiple>
+            <v-expansion-panel :value="name">
+              <v-expansion-panel-text>
+                <tag-search-item @click="onTagClick(tag)" @remove="onTagRemoveClick(tag.id)"
+                  @TagColorChange="onTagColorChange(tag, $event)"
+                  @toggle-and="toggleTag(tag.id, matchIds.and_tags)" @toggle-or="toggleTag(tag.id, matchIds.or_tags)"
+                  @toggle-not="toggleTag(tag.id, matchIds.not_tags)" v-for="(tag, idx) in tagListFilter(list, name)"
+                  :key="tag.id" :idx="idx" :name="name" :tag="tag" :selected="selectedTagIds.has(tag.id)" />
+                <li v-if="name === 'custom'" class="tag" @click="addInputing = true">
+                  <template v-if="addInputing">
+                    <div class="d-flex ga-1">
+                      <v-text-field v-model="addTagName" style="width: 128px" :loading="loading" clearable
+                        density="compact" hide-details />
+                      <v-btn size="small" color="primary" @click.capture.stop="onAddTagBtnSubmit" :loading="loading">{{
+      addTagName ? $t('submit') : $t('cancel') }}</v-btn>
+                    </div>
+                  </template>
+                  <template v-else>
+                    <PlusOutlined /> {{ $t('add') }}
+                  </template>
+                </li>
+                <div v-if="getTagMaxNum(name) < list.length">
+                  <v-btn block @click="tagMaxNum.set(name, getTagMaxNum(name) + 512)">{{ $t('loadmore') }}</v-btn>
+                </div>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+          </v-expansion-panels>
         </ul>
       </template>
 
@@ -362,7 +365,7 @@ const tagIdsToString = (tagIds: TagId[]) => {
       </div>
     </template>
     <div class="spin-container" v-else>
-      <a-spin size="large" />
+      <v-progress-circular indeterminate size="large" />
     </div>
   </div>
 </template>

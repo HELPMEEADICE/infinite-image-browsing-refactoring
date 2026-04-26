@@ -6,7 +6,7 @@
           <slot :record="record"></slot>
         </div>
         <div class="rec-actions">
-          <a-button @click="$emit('reuseRecord', record)" type="primary">{{ $t('restore') }}</a-button>
+          <v-btn @click="$emit('reuseRecord', record)" color="primary">{{ $t('restore') }}</v-btn>
           <div class="pin" @click="records.switchPin(record)">
             <PushpinFilled /> {{ records.isPinned(record) ? $t('unpin') : $t('pin') }}
           </div>

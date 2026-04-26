@@ -9,7 +9,7 @@ import { getDbBasicInfo, getExpiredDirs, getImagesBySubstr, updateImageData, typ
 import { copy2clipboardI18n,  makeAsyncFunctionSingle, useGlobalEventListen } from '@/util'
 import fullScreenContextMenu from '@/page/fileTransfer/fullScreenContextMenu.vue'
 import { LeftCircleOutlined, RightCircleOutlined, regex, AimOutlined } from '@/icon'
-import { message } from 'ant-design-vue'
+import { uiMessage } from '@/ui'
 import { t } from '@/i18n'
 import { createImageSearchIter, useImageSearch } from './hook'
 import { useKeepMultiSelect } from '../fileTransfer/hook'
@@ -164,7 +164,7 @@ const query = async () => {
   onScroll()
   scroller.value!.scrollToItem(0)
   if (!images.value.length) {
-    message.info(t('fuzzy-search-noResults'))
+    uiMessage.info(t('fuzzy-search-noResults'))
   }
 }
 
@@ -183,104 +183,99 @@ const g = useGlobalStore()
 const { onClearAllSelected, onSelectAll, onReverseSelect } = useKeepMultiSelect()
 </script>
 <template>
-  <a-modal v-model:visible="showHistoryRecord" width="70vw" mask-closable @ok="showHistoryRecord = false">
+  <v-dialog v-model="showHistoryRecord" width="70vw" @click:outside="showHistoryRecord = false">
     <HistoryRecord :records="fuzzySearchHistory" @reuse-record="reuse">
       <template #default="{ record }">
         <div style="padding-right: 16px;">
-          <a-row>
-            <a-col :span="4">{{ $t('historyRecordsSubstr') }}:</a-col>
-            <a-col :span="20">{{ record.substr }}</a-col>
-          </a-row>
-          <a-row v-if="record.folder_paths_str">
-            <a-col :span="4">{{ $t('searchScope') }}:</a-col>
-            <a-col :span="20">{{ record.folder_paths_str }}</a-col>
-          </a-row>
-          <a-row>
-            <a-col :span="4">{{ $t('historyRecordsisRegex') }}:</a-col>
-            <a-col :span="20">{{ record.isRegex }}</a-col>
-          </a-row>
-          <a-row v-if="record.mediaType">
-            <a-col :span="4">{{ $t('mediaType') }}:</a-col>
-            <a-col :span="20">{{ record.mediaType }}</a-col>
-          </a-row>
-          <a-row>
-            <a-col :span="4">{{ $t('time') }}:</a-col>
-            <a-col :span="20">{{ record.time }}</a-col>
-          </a-row>
+          <v-row>
+            <v-col cols="4">{{ $t('historyRecordsSubstr') }}:</v-col>
+            <v-col cols="20">{{ record.substr }}</v-col>
+          </v-row>
+          <v-row v-if="record.folder_paths_str">
+            <v-col cols="4">{{ $t('searchScope') }}:</v-col>
+            <v-col cols="20">{{ record.folder_paths_str }}</v-col>
+          </v-row>
+          <v-row>
+            <v-col cols="4">{{ $t('historyRecordsisRegex') }}:</v-col>
+            <v-col cols="20">{{ record.isRegex }}</v-col>
+          </v-row>
+          <v-row v-if="record.mediaType">
+            <v-col cols="4">{{ $t('mediaType') }}:</v-col>
+            <v-col cols="20">{{ record.mediaType }}</v-col>
+          </v-row>
+          <v-row>
+            <v-col cols="4">{{ $t('time') }}:</v-col>
+            <v-col cols="20">{{ record.time }}</v-col>
+          </v-row>
           <div>
           </div>
         </div>
       </template>
     </HistoryRecord>
-  </a-modal>
+  </v-dialog>
   <div class="container" ref="stackViewEl">
-    <a-alert
+    <v-alert
       v-if="!showAutoUpdateFeatureTip"
-      type="info"
-      show-icon
-      :message="$t('autoUpdateFeatureTip')"
+      color="info"
+      icon
+      :text="$t('autoUpdateFeatureTip')"
       style="margin: 8px;"
       closable
-      @close="showAutoUpdateFeatureTip = true"
+      @click:close="showAutoUpdateFeatureTip = true"
     >
-      <template #action>
-        <a-button size="small" type="link" @click="showAutoUpdateFeatureTip = true">
+      <template #append>
+        <v-btn size="small" variant="text" @click="showAutoUpdateFeatureTip = true">
           {{ $t('gotIt') }}
-        </a-button>
+        </v-btn>
       </template>
-    </a-alert>
-    <a-alert
+    </v-alert>
+    <v-alert
       v-if="info && info.expired && !g.autoUpdateIndex"
-      type="warning"
-      show-icon
-      :message="$t('indexExpiredManualUpdate')"
+      color="warning"
+      icon
+      :text="$t('indexExpiredManualUpdate')"
       style="margin: 8px;"
       closable
     />
     <MultiSelectKeep :show="!!multiSelectedIdxs.length || g.keepMultiSelect" @clear-all-selected="onClearAllSelected"
       @select-all="onSelectAll" @reverse-select="onReverseSelect" />
     <div class="search-bar"  @keydown.stop>
-      <a-input v-model:value="substr" :placeholder="$t('fuzzy-search-placeholder') + ' ' + $t('regexSearchEnabledHint')"
-        :disabled="!queue.isIdle" @keydown.enter="query" allow-clear />
-      <ASelect v-model:value="mediaType" style="width: 100px; margin: 0 4px;" :disabled="!queue.isIdle">
-        <ASelectOption value="all">{{ $t('all') }}</ASelectOption>
-        <ASelectOption value="image">{{ $t('image') }}</ASelectOption>
-        <ASelectOption value="video">{{ $t('video') }}</ASelectOption>
-      </ASelect>
+      <v-text-field v-model="substr" :placeholder="$t('fuzzy-search-placeholder') + ' ' + $t('regexSearchEnabledHint')"
+        :disabled="!queue.isIdle" @keydown.enter="query" clearable hide-details />
+      <v-select v-model="mediaType" style="width: 100px; margin: 0 4px;" :disabled="!queue.isIdle"
+        :items="[{ title: $t('all'), value: 'all' }, { title: $t('image'), value: 'image' }, { title: $t('video'), value: 'video' }]"
+        item-title="title" item-value="value" hide-details />
         <div class="regex-icon" :class="{ selected: pathOnly }" @keydown.stop @click="pathOnly = !pathOnly"
         :title="$t('pathOnly')"><AimOutlined /></div>
       <div class="regex-icon" :class="{ selected: isRegex }" @keydown.stop @click="onRegexpClick"
         title="Use Regular Expression"> <img :src="regex"></div>
-      <AButton @click="onUpdateBtnClick" :loading="!queue.isIdle" type="primary" v-if="info && !info.img_count">
-        {{ $t('generateIndexHint') }}</AButton>
+      <v-btn @click="onUpdateBtnClick" :loading="!queue.isIdle" color="primary" v-if="info && !info.img_count">
+        {{ $t('generateIndexHint') }}</v-btn>
       <template v-else>
-        <AButton type="primary" @click="query" :loading="!queue.isIdle || iter.loading"
+        <v-btn color="primary" @click="query" :loading="!queue.isIdle || iter.loading"
            >{{ $t('search') }}
-        </AButton>
-        <AButton @click="onUpdateBtnClick" :loading="!queue.isIdle"
+        </v-btn>
+        <v-btn @click="onUpdateBtnClick" :loading="!queue.isIdle"
           v-if="info && info.expired && !g.autoUpdateIndex"
-          style="margin-left: 8px;">
+          class="ml-2">
           {{ $t('UpdateIndex') }}
-        </AButton>
+        </v-btn>
       </template>
     </div>
     <div class="search-bar">
       <div class="form-name">{{ $t('searchScope') }}</div>
-      <ATextarea :auto-size="{ maxRows: 8 }" v-model:value="folder_paths_str"
-        :placeholder="$t('specifiedSearchFolder')" />
+      <v-textarea auto-grow v-model="folder_paths_str"
+        :placeholder="$t('specifiedSearchFolder')" hide-details />
     </div>
     <div class="search-bar last actions">
-      <a-button @click="saveLoadedFileAsJson" v-if="images.length">{{ $t('saveLoadedImageAsJson') }}</a-button>
-      <a-button @click="saveAllFileAsJson" v-if="images.length">{{ $t('saveAllAsJson') }}</a-button>
-      <a-button @click="showHistoryRecord = true">{{ $t('history') }}</a-button>
+      <v-btn @click="saveLoadedFileAsJson" v-if="images.length">{{ $t('saveLoadedImageAsJson') }}</v-btn>
+      <v-btn @click="saveAllFileAsJson" v-if="images.length">{{ $t('saveAllAsJson') }}</v-btn>
+      <v-btn @click="showHistoryRecord = true">{{ $t('history') }}</v-btn>
     <div class="tips-wrapper">
       <TipsCarousel :interval="10000" />
     </div>
     </div>
-    <ASpin size="large" :spinning="!queue.isIdle">
-      <AModal v-model:visible="showGenInfo" width="70vw" mask-closable @ok="showGenInfo = false">
-        <template #cancelText />
-        <ASkeleton active :loading="!genInfoQueue.isIdle">
+      <v-dialog v-model="showGenInfo" width="70vw" @click:outside="showGenInfo = false">
           <div style="
                             width: 100%;
                               word-break: break-all;
@@ -291,8 +286,7 @@ const { onClearAllSelected, onSelectAll, onReverseSelect } = useKeepMultiSelect(
             <div class="hint">{{ $t('doubleClickToCopy') }}</div>
             {{ imageGenInfo }}
           </div>
-        </ASkeleton>
-      </AModal>
+      </v-dialog>
       <div v-if="searchCount === 0 && !images.length && fuzzySearchHistory.getRecords().length"
         style="margin: 64px 16px 32px; padding: 8px; background: var(--zp-secondary-variant-background);border-radius: 16px">
         <h2 style="margin: 16px 32px 16px;">
@@ -301,26 +295,26 @@ const { onClearAllSelected, onSelectAll, onReverseSelect } = useKeepMultiSelect(
         <HistoryRecord :records="fuzzySearchHistory" @reuse-record="reuse">
           <template #default="{ record }">
             <div style="padding-right: 16px;;">
-              <a-row>
-                <a-col :span="4">{{ $t('historyRecordsSubstr') }}:</a-col>
-                <a-col :span="20">{{ record.substr }}</a-col>
-              </a-row>
-              <a-row  v-if="record.folder_paths_str">
-                <a-col :span="4">{{ $t('searchScope') }}:</a-col>
-                <a-col :span="20">{{ record.folder_paths_str }}</a-col>
-              </a-row>
-              <a-row>
-                <a-col :span="4">{{ $t('historyRecordsisRegex') }}:</a-col>
-                <a-col :span="20">{{ record.isRegex }}</a-col>
-              </a-row>
-              <a-row v-if="record.mediaType">
-                <a-col :span="4">{{ $t('mediaType') }}:</a-col>
-                <a-col :span="20">{{ record.mediaType }}</a-col>
-              </a-row>
-              <a-row>
-                <a-col :span="4">{{ $t('time') }}:</a-col>
-                <a-col :span="20">{{ record.time }}</a-col>
-              </a-row>
+              <v-row>
+                <v-col :span="4">{{ $t('historyRecordsSubstr') }}:</v-col>
+                <v-col :span="20">{{ record.substr }}</v-col>
+              </v-row>
+              <v-row v-if="record.folder_paths_str">
+                <v-col :span="4">{{ $t('searchScope') }}:</v-col>
+                <v-col :span="20">{{ record.folder_paths_str }}</v-col>
+              </v-row>
+              <v-row>
+                <v-col :span="4">{{ $t('historyRecordsisRegex') }}:</v-col>
+                <v-col :span="20">{{ record.isRegex }}</v-col>
+              </v-row>
+              <v-row v-if="record.mediaType">
+                <v-col :span="4">{{ $t('mediaType') }}:</v-col>
+                <v-col :span="20">{{ record.mediaType }}</v-col>
+              </v-row>
+              <v-row>
+                <v-col :span="4">{{ $t('time') }}:</v-col>
+                <v-col :span="20">{{ record.time }}</v-col>
+              </v-row>
               <div>
               </div>
             </div>
@@ -350,7 +344,6 @@ const { onClearAllSelected, onSelectAll, onReverseSelect } = useKeepMultiSelect(
         <LeftCircleOutlined @click="previewImgMove('prev')" :class="{ disable: !canPreview('prev') }" />
         <RightCircleOutlined @click="previewImgMove('next')" :class="{ disable: !canPreview('next') }" />
       </div>
-    </ASpin>
     <fullScreenContextMenu v-if="previewing && images && images[previewIdx]" :file="images[previewIdx]"
       :idx="previewIdx" @context-menu-click="onContextMenuClickU" />
   </div>

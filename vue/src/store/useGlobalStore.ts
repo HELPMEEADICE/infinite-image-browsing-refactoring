@@ -293,6 +293,86 @@ export const useGlobalStore = defineStore(
       tabListHistoryRecord.value = tabListHistoryRecord.value.slice(0, 2)
     }
 
+    const ensureAtLeastOneTab = () => {
+      if (tabList.value.length === 0) {
+        const pane = createEmptyPane()
+        tabList.value.push({ panes: [pane], key: pane.key, id: uniqueId() })
+      }
+    }
+
+    const removePaneFromTab = (tabIdx: number, paneKey: string) => {
+      const tab = tabList.value[tabIdx]
+      if (!tab) return
+      const paneIdx = tab.panes.findIndex(v => v.key === paneKey)
+      if (paneIdx < 0) return
+      if (tab.key === paneKey) {
+        tab.key = tab.panes[paneIdx - 1]?.key ?? tab.panes[paneIdx + 1]?.key ?? ''
+      }
+      tab.panes.splice(paneIdx, 1)
+      if (tab.panes.length === 0) {
+        tabList.value.splice(tabIdx, 1)
+      }
+      ensureAtLeastOneTab()
+    }
+
+    const movePane = (fromTabIdx: number, fromPaneIdx: number, toTabIdx: number, mode: 'insert' | 'add-right') => {
+      if (fromTabIdx < 0 || fromPaneIdx < 0) return
+      const fromTab = tabList.value[fromTabIdx]
+      if (!fromTab) return
+      const pane = fromTab.panes[fromPaneIdx]
+      if (!pane) return
+      const movingActive = fromTab.key === pane.key
+      fromTab.panes.splice(fromPaneIdx, 1)
+      if (movingActive) {
+        fromTab.key = fromTab.panes[fromPaneIdx - 1]?.key ?? fromTab.panes[fromPaneIdx]?.key ?? ''
+      }
+      let targetIdx = toTabIdx
+      if (fromTab.panes.length === 0) {
+        tabList.value.splice(fromTabIdx, 1)
+        if (fromTabIdx < toTabIdx) {
+          targetIdx -= 1
+        }
+      }
+      if (mode === 'add-right') {
+        tabList.value.splice(targetIdx + 1, 0, { panes: [pane], key: pane.key, id: uniqueId() })
+      } else {
+        const targetTab = tabList.value[targetIdx]
+        if (!targetTab) return
+        targetTab.panes.push(pane)
+        targetTab.key = pane.key
+      }
+      ensureAtLeastOneTab()
+    }
+
+    const movePaneToRightSplit = (tabIdx: number, paneKey: string) => {
+      const tab = tabList.value[tabIdx]
+      if (!tab) return
+      const paneIdx = tab.panes.findIndex(v => v.key === paneKey)
+      if (paneIdx < 0) return
+      movePane(tabIdx, paneIdx, tabIdx, 'add-right')
+    }
+
+    const closeOtherPanes = (tabIdx: number, paneKey: string) => {
+      const tab = tabList.value[tabIdx]
+      if (!tab) return
+      const pane = tab.panes.find(v => v.key === paneKey)
+      if (!pane) return
+      tab.panes = [pane]
+      tab.key = pane.key
+    }
+
+    const closePanesByDirection = (tabIdx: number, paneKey: string, direction: 'left' | 'right') => {
+      const tab = tabList.value[tabIdx]
+      if (!tab) return
+      const paneIdx = tab.panes.findIndex(v => v.key === paneKey)
+      if (paneIdx < 0) return
+      tab.panes = direction === 'left' ? tab.panes.slice(paneIdx) : tab.panes.slice(0, paneIdx + 1)
+      if (!tab.panes.some(v => v.key === tab.key)) {
+        tab.key = paneKey
+      }
+      ensureAtLeastOneTab()
+    }
+
     const openTagSearchMatchedImageGridInRight = async (
       tabIdx: number,
       id: string,
@@ -460,6 +540,12 @@ export const useGlobalStore = defineStore(
       enableThumbnail,
       dragingTab,
       saveRecord,
+      ensureAtLeastOneTab,
+      removePaneFromTab,
+      movePane,
+      movePaneToRightSplit,
+      closeOtherPanes,
+      closePanesByDirection,
       recent,
       tabListHistoryRecord,
       gridThumbnailResolution,

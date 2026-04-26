@@ -33,28 +33,35 @@ watch(() => [g.enableThumbnail, g.gridThumbnailResolution], debounce(async () =>
 
 </script>
 <template>
-  <a-form-item :label="t('defaultGridCellWidth')">
+  <v-label class="d-flex align-center ga-4 mb-4">
+    {{ t('defaultGridCellWidth') }}
     <NumInput :min="64" :max="1024" :step="16" v-model="g.defaultGridCellWidth" />
-  </a-form-item>
-  <a-form-item :label="t('useThumbnailPreview')">
-    <a-switch v-model:checked="g.enableThumbnail" />
-  </a-form-item>
-  <a-form-item :label="t('thumbnailResolution')" v-if="g.enableThumbnail">
+  </v-label>
+  <v-label class="d-flex align-center ga-4 mb-4">
+    {{ t('useThumbnailPreview') }}
+    <v-switch v-model="g.enableThumbnail" hide-details />
+  </v-label>
+  <v-label class="d-flex align-center ga-4 mb-4" v-if="g.enableThumbnail">
+    {{ t('thumbnailResolution') }}
     <NumInput v-model="g.gridThumbnailResolution" :min="256" :max="1024" :step="64" />
-  </a-form-item>
-  <a-form-item :label="t('livePreview')">
+  </v-label>
+  <v-label class="d-flex align-center ga-4 mb-4">
+    {{ t('livePreview') }}
     <div>
       <img :width="g.defaultGridCellWidth" :height="g.defaultGridCellWidth" :src="g.enableThumbnail ? thuImg : sampleImg">
     </div>
-  </a-form-item>
-  <a-form-item :label="t('defaultShowChangeIndicators')">
-    <a-switch v-model:checked="g.defaultChangeIndchecked" />
-  </a-form-item>
-  <a-form-item v-if="g.defaultChangeIndchecked" :label="t('defaultSeedAsChange')">
-    <a-switch v-model:checked="g.defaultSeedChangeChecked" />
-  </a-form-item>
-  <a-form-item :label="t('previewMaskBackgroundOpacity')">
+  </v-label>
+  <v-label class="d-flex align-center ga-4 mb-4">
+    {{ t('defaultShowChangeIndicators') }}
+    <v-switch v-model="g.defaultChangeIndchecked" hide-details />
+  </v-label>
+  <v-label class="d-flex align-center ga-4 mb-4" v-if="g.defaultChangeIndchecked">
+    {{ t('defaultSeedAsChange') }}
+    <v-switch v-model="g.defaultSeedChangeChecked" hide-details />
+  </v-label>
+  <v-label class="d-flex align-center ga-4 mb-4">
+    {{ t('previewMaskBackgroundOpacity') }}
     <NumInput :min="0" :max="1" :step="0.05" v-model="g.previewBgOpacity" />
-  </a-form-item>
+  </v-label>
 </template>
 <style lang="scss" scoped></style>

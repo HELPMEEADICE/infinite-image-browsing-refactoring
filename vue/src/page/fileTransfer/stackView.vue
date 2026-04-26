@@ -32,9 +32,9 @@ import { sortMethods } from './fileSort'
 import { isTauri } from '@/util/env'
 import MultiSelectKeep from '@/components/MultiSelectKeep.vue'
 import { openSmartOrganizeConfig } from '@/util/smartOrganize'
-import { Modal, message } from 'ant-design-vue'
+import { uiMessage, uiDialog } from '@/ui'
 import { t } from '@/i18n'
-import { h, ref, watch, onMounted, nextTick } from 'vue'
+import { ref, watch, onMounted, nextTick } from 'vue'
 import { openImageFullscreenPreview } from '@/util/imagePreviewOperation'
 import { normalize } from '@/util/path'
 
@@ -117,67 +117,56 @@ const onFlattenFolderClick = async () => {
   flattenFolderLoading.value = true
   let dryRunResult
   try {
-    message.loading({ content: t('flattenFolderScanning'), key: 'flatten', duration: 0 })
+    uiMessage.info(t('flattenFolderScanning'))
     dryRunResult = await flattenFolder({ folder_path: currLocation.value, dry_run: true })
   } catch (e: any) {
-    message.destroy('flatten')
-    message.error(e.message || String(e))
+    // message.destroy('flatten')
+    uiMessage.error(e.message || String(e))
     flattenFolderLoading.value = false
     return
   }
-  message.destroy('flatten')
+  // message.destroy('flatten')
   flattenFolderLoading.value = false
 
   // Check if no files to move
   if (dryRunResult.total_files === 0) {
-    message.info(t('flattenFolderNoFiles'))
+    uiMessage.info(t('flattenFolderNoFiles'))
     return
   }
 
   // Check for conflicts
   if (dryRunResult.conflicts.length > 0) {
-    Modal.error({
-      title: t('flattenFolderConflict'),
-      content: h('div', {}, [
-        h('p', {}, `${t('flattenFolderConflictFiles')}:`),
-        h('ul', { style: 'max-height: 300px; overflow-y: auto;' },
-          dryRunResult.conflicts.map(f => h('li', { style: 'color: red;' }, f))
-        )
-      ])
-    })
+    const conflictStr = dryRunResult.conflicts.slice(0, 20).join('\n')
+    const suffix = dryRunResult.conflicts.length > 20 ? `\n...and ${dryRunResult.conflicts.length - 20} more` : ''
+    uiMessage.error(`${t('flattenFolderConflict')}:\n${conflictStr}${suffix}`)
     return
   }
 
   // Step 2: Confirm with user
-  Modal.confirm({
+  const confirmed = await uiDialog.confirm({
     title: t('flattenFolder'),
-    content: h('div', {}, [
-      h('p', { style: 'color: red; font-weight: bold;' }, t('flattenFolderWarning')),
-      h('p', {}, t('flattenFolderConfirm', { count: dryRunResult.total_files }))
-    ]),
+    message: `${t('flattenFolderWarning')}\n${t('flattenFolderConfirm', { count: dryRunResult.total_files })}`,
     okText: t('confirm'),
-    okType: 'danger',
     cancelText: t('cancel'),
-    onOk: async () => {
-      // Step 3: Execute flatten
-      try {
-        message.loading({ content: t('flattenFolderExecuting'), key: 'flatten', duration: 0 })
-        const result = await flattenFolder({ folder_path: currLocation.value, dry_run: false })
-        message.destroy('flatten')
-
-        if (result.success) {
-          message.success(t('flattenFolderSuccess', { count: result.moved_files }))
-          // Refresh the view
-          refresh()
-        } else {
-          message.error(`${t('error')}: ${result.errors?.join(', ')}`)
-        }
-      } catch (e: any) {
-        message.destroy('flatten')
-        message.error(e.message || String(e))
-      }
-    }
+    danger: true,
   })
+  if (!confirmed) return
+
+  // Step 3: Execute flatten
+  try {
+    uiMessage.info(t('flattenFolderExecuting'))
+    const result = await flattenFolder({ folder_path: currLocation.value, dry_run: false })
+
+    if (result.success) {
+      uiMessage.success(t('flattenFolderSuccess', { count: result.moved_files }))
+      // Refresh the view
+      refresh()
+    } else {
+      uiMessage.error(`${t('error')}: ${result.errors?.join(', ')}`)
+    }
+  } catch (e: any) {
+    uiMessage.error(e.message || String(e))
+  }
 }
 
 watch(
@@ -246,17 +235,18 @@ onMounted(() => {
 
 </script>
 <template>
-  <ASpin :spinning="spinning" size="large">
+  <template v-if="!spinning">
     <MultiSelectKeep :show="global.keepMultiSelect || !!multiSelectedIdxs.length"
        @clear-all-selected="onClearAllSelected" @select-all="onSelectAll"
       @reverse-select="onReverseSelect" />
-    <ASelect style="display: none"></ASelect>
+    <v-select style="display: none"></v-select>
 
     <div ref="stackViewEl" @dragover.prevent @drop.prevent="onDrop($event)" class="container">
-      <AModal v-model:visible="showGenInfo" width="70vw" mask-closable @ok="showGenInfo = false">
-        <template #cancelText />
-        <ASkeleton active :loading="!q.isIdle">
-          <div style="
+      <v-dialog v-model="showGenInfo" width="70vw" @click:outside="showGenInfo = false">
+        <v-card>
+          <v-card-text>
+            <template v-if="q.isIdle">
+              <div style="
                 width: 100%;
                 word-break: break-all;
                 white-space: pre-line;
@@ -264,23 +254,27 @@ onMounted(() => {
                 overflow: auto;
                 z-index: 9999;
               " @dblclick="copy2clipboardI18n(imageGenInfo)">
-            <div class="hint">{{ $t('doubleClickToCopy') }}</div>
-            {{ imageGenInfo }}
-          </div>
-        </ASkeleton>
-      </AModal>
+                <div class="hint">{{ $t('doubleClickToCopy') }}</div>
+                {{ imageGenInfo }}
+              </div>
+            </template>
+            <v-progress-circular indeterminate v-else />
+          </v-card-text>
+        </v-card>
+      </v-dialog>
       <div class="location-bar">
         <div class="breadcrumb" :style="{ flex: isLocationEditing ? 1 : '' }" >
-          <AInput v-if="isLocationEditing" style="flex: 1" v-model:value="locInputValue" @click.stop @keydown.stop
-            @press-enter="onLocEditEnter" allow-clear></AInput>
-          <a-breadcrumb style="flex: 1" v-else>
-            <a-breadcrumb-item v-for="(item, idx) in stack" :key="idx">
+          <v-text-field v-if="isLocationEditing" style="flex: 1" v-model="locInputValue" @click.stop @keydown.stop
+            @keydown.enter="onLocEditEnter" clearable hide-details density="compact"></v-text-field>
+          <div class="breadcrumb" style="flex: 1" v-else>
+            <span v-for="(item, idx) in stack" :key="idx">
               <a @click.prevent="back(idx)">{{ item.curr === '/' ? $t('root') : item.curr.replace(/:\/$/, $t('drive'))
                 }}</a>
-            </a-breadcrumb-item>
-          </a-breadcrumb>
+              <span v-if="idx < stack.length - 1" class="mx-1">/</span>
+            </span>
+          </div>
 
-          <AButton size="small" v-if="isLocationEditing" @click="onLocEditEnter" type="primary">{{ $t('go') }}</AButton>
+          <v-btn size="small" density="compact" v-if="isLocationEditing" @click="onLocEditEnter" color="primary">{{ $t('go') }}</v-btn>
           <div v-else class="location-act">
             <a @click.prevent="backToLastUseTo" style="margin: 0 8px 16px 0;" v-if="mode === 'scanned-fixed'"><ArrowLeftOutlined /></a>
             <a @click.prevent="copyLocation" class="copy">{{ $t('copy') }}</a>
@@ -291,44 +285,44 @@ onMounted(() => {
           <a class="opt" @click.prevent="refresh"> {{ $t('refresh') }} </a>
           <a class="opt" @click.prevent="onTiktokViewClick">{{ $t('TikTok View') }}</a>
           <a class="opt" @click.prevent="openSmartOrganizeConfig(currLocation)" :title="$t('smartOrganizeHint')">{{ $t('smartOrganize') }}</a>
-          <a-dropdown>
-            <a class="opt" @click.prevent>
-              {{ $t('search') }}
-              <down-outlined />
-            </a>
-            <template #overlay>
-              <a-menu>
-                <a-menu-item key="tag-search">
-                  <a @click.prevent="searchInCurrentDir('tag-search')">{{ $t('imgSearch') }}</a>
-                </a-menu-item>
-                <a-menu-item key="tag-search">
-                  <a @click.prevent="searchInCurrentDir('fuzzy-search')">{{ $t('fuzzy-search') }}</a>
-                </a-menu-item>
-              </a-menu>
+          <v-menu>
+            <template #activator="{ props }">
+              <a class="opt" @click.prevent v-bind="props">
+                {{ $t('search') }}
+                <down-outlined />
+              </a>
             </template>
-          </a-dropdown>
+            <v-list>
+              <v-list-item value="tag-search">
+                <a @click.prevent="searchInCurrentDir('tag-search')">{{ $t('imgSearch') }}</a>
+              </v-list-item>
+              <v-list-item value="tag-search">
+                <a @click.prevent="searchInCurrentDir('fuzzy-search')">{{ $t('fuzzy-search') }}</a>
+              </v-list-item>
+            </v-list>
+          </v-menu>
           <a class="opt" @click.prevent="onWalkBtnClick" v-if="showWalkButton"> Walk </a>
           <a class="opt" @click.prevent.stop="selectAll"> {{ $t('selectAll') }} </a>
-          <a-dropdown>
-            <a class="opt" @click.prevent>
-              {{ $t('quickMove') }}
-              <down-outlined />
-            </a>
-            <template #overlay>
-              <a-menu>
-                <a-menu-item v-for="item in global.quickMovePaths" :key="item.dir">
-                  <a @click.prevent="quickMoveTo(item.dir)">{{ item.zh }}</a>
-                </a-menu-item>
-              </a-menu>
+          <v-menu>
+            <template #activator="{ props }">
+              <a class="opt" @click.prevent v-bind="props">
+                {{ $t('quickMove') }}
+                <down-outlined />
+              </a>
             </template>
-          </a-dropdown>
-          <a-dropdown :trigger="['click']" v-model:visible="moreActionsDropdownShow" placement="bottomLeft"
-            :getPopupContainer="(trigger: any) => trigger.parentNode as HTMLDivElement">
-            <a class="opt" @click.prevent>
-              {{ $t('more') }}
-            </a>
-            <template #overlay>
-              <div style="
+            <v-list>
+              <v-list-item v-for="item in global.quickMovePaths" :key="item.dir">
+                <a @click.prevent="quickMoveTo(item.dir)">{{ item.zh }}</a>
+              </v-list-item>
+            </v-list>
+          </v-menu>
+          <v-menu v-model="moreActionsDropdownShow">
+            <template #activator="{ props }">
+              <a class="opt" @click.prevent v-bind="props">
+                {{ $t('more') }}
+              </a>
+            </template>
+            <div style="
                     width: 512px;
                     background: var(--zp-primary-background);
                     padding: 16px;
@@ -336,23 +330,24 @@ onMounted(() => {
                     box-shadow: 0 0 4px var(--zp-secondary-background);
                     border: 1px solid var(--zp-secondary-background);
                   ">
-                <a-form v-bind="{
-                  labelCol: { span: 10 },
-                  wrapperCol: { span: 14 }
-                }">
-                  <a-form-item :label="$t('gridCellWidth')">
+                <div class="d-flex flex-column ga-4">
+                  <div>
+                    <label>{{ $t('gridCellWidth') }}</label>
                     <numInput v-model="cellWidth" :max="1024" :min="64" :step="16" />
-                  </a-form-item>
-                  <a-form-item :label="$t('sortingMethod')">
+                  </div>
+                  <div>
+                    <label>{{ $t('sortingMethod') }}</label>
                     <search-select v-model:value="sortMethod" @click.stop :conv="sortMethodConv"
                       :options="sortMethods" />
-                  </a-form-item>
-                  <a-form-item :label="$t('showChangeIndicators')">
-                    <a-switch v-model:checked="changeIndchecked" @click="getRawGenParams" />
-                  </a-form-item>
-                  <a-form-item :label="$t('seedAsChange')">
-                    <a-switch v-model:checked="seedChangeChecked" :disabled="!changeIndchecked" />
-                  </a-form-item>
+                  </div>
+                  <div class="d-flex align-center ga-2">
+                    <label>{{ $t('showChangeIndicators') }}</label>
+                    <v-switch v-model="changeIndchecked" @click="getRawGenParams" hide-details />
+                  </div>
+                  <div class="d-flex align-center ga-2">
+                    <label>{{ $t('seedAsChange') }}</label>
+                    <v-switch v-model="seedChangeChecked" :disabled="!changeIndchecked" hide-details />
+                  </div>
                   <div style="padding: 4px;">
                     <a @click.prevent="addToSearchScanPathAndQuickMove" >{{
     $t('addToSearchScanPathAndQuickMove') }}</a>
@@ -372,10 +367,9 @@ onMounted(() => {
                   <div style="padding: 4px;">
                     <a @click.prevent="onFlattenFolderClick" style="color: #ff4d4f;">{{ $t('flattenFolder') }}</a>
                   </div>
-                </a-form>
+                </div>
               </div>
-            </template>
-          </a-dropdown>
+          </v-menu>
         </div>
       </div>
       <div v-if="currPage" class="view">
@@ -401,9 +395,9 @@ onMounted(() => {
           </template>
           <template #after>
             <div style="padding: 16px 0 512px;">
-              <AButton v-if="props.mode === 'walk'" @click="loadNextDir" :loading="loadNextDirLoading" block type="primary"
-                :disabled="!canLoadNext" ghost>
-                {{ $t('loadNextPage') }}</AButton>
+              <v-btn v-if="props.mode === 'walk'" @click="loadNextDir" :loading="loadNextDirLoading" block color="primary"
+                :disabled="!canLoadNext" variant="outlined">
+                {{ $t('loadNextPage') }}</v-btn>
             </div>
           </template>
 
@@ -417,7 +411,10 @@ onMounted(() => {
     <fullScreenContextMenu v-if="previewing" :file="sortedFiles[previewIdx]" :idx="previewIdx"
       @context-menu-click="onContextMenuClick" />
     <BaseFileListInfo :file-num="sortedFiles.length" :selected-file-num="multiSelectedIdxs.length" />
-  </ASpin>
+    </template>
+    <div v-else class="text-center pa-4">
+      <v-progress-circular indeterminate size="large" />
+    </div>
 </template>
 <style lang="scss" scoped>
 

@@ -10,7 +10,7 @@ import { useFilesDisplay, useHookShareState } from '@/page/fileTransfer/hook'
 import { getFileTransferDataFromDragEvent, toImageUrl } from '@/util/file'
 import { axiosInst } from '@/api'
 import { createReactiveQueue } from '@/util'
-import { message } from 'ant-design-vue'
+import { uiMessage } from '@/ui'
 import { t } from '@/i18n'
 const { stackViewEl } = useHookShareState().toRefs()
 const { itemSize, gridItems, cellWidth } = useFilesDisplay()
@@ -50,7 +50,7 @@ const onPackClick = async () => {
     await axiosInst.value.post('/zip', { paths: selectdFiles.value.map(v => v.fullpath), compress: gs.batchDownloadCompress, pack_only: true }, {
       responseType: 'blob',
     })
-    message.success(t('success'))
+    uiMessage.success(t('success'))
   })
 }
 

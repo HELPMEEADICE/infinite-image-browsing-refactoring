@@ -111,10 +111,7 @@ const onTiktokViewClick = () => {
     
     <MultiSelectKeep :show="!!multiSelectedIdxs.length || g.keepMultiSelect" 
       @clear-all-selected="onClearAllSelected" @select-all="onSelectAll" @reverse-select="onReverseSelect"/>
-    <ASpin size="large" :spinning="!queue.isIdle">
-      <AModal v-model:visible="showGenInfo" width="70vw" mask-closable @ok="showGenInfo = false">
-        <template #cancelText />
-        <ASkeleton active :loading="!genInfoQueue.isIdle">
+      <v-dialog v-model="showGenInfo" width="70vw" @click:outside="showGenInfo = false">
           <div
             style="
               width: 100%;
@@ -128,13 +125,12 @@ const onTiktokViewClick = () => {
             <div class="hint">{{ $t('doubleClickToCopy') }}</div>
             {{ imageGenInfo }}
           </div>
-        </ASkeleton>
-      </AModal>
+      </v-dialog>
       <div class="action-bar">
-        <a-switch v-model:checked="randomSort" :checked-children="$t('randomSort')" :un-checked-children="$t('sortByDate')" />
-        <a-button @click="onTiktokViewClick" :disabled="!images?.length">{{ $t('tiktokView') }}</a-button>
-        <a-button @click="saveLoadedFileAsJson">{{ $t('saveLoadedImageAsJson') }}</a-button>
-        <a-button @click="saveAllFileAsJson">{{ $t('saveAllAsJson') }}</a-button>
+        <v-switch v-model="randomSort" :label="$t('randomSort')" hide-details />
+        <v-btn @click="onTiktokViewClick" :disabled="!images?.length">{{ $t('tiktokView') }}</v-btn>
+        <v-btn @click="saveLoadedFileAsJson">{{ $t('saveLoadedImageAsJson') }}</v-btn>
+        <v-btn @click="saveAllFileAsJson">{{ $t('saveAllAsJson') }}</v-btn>
 
       </div>
       <RecycleScroller
@@ -178,7 +174,7 @@ const onTiktokViewClick = () => {
       <div v-else-if="iter.load && selectedTagIds.and_tags.length === 1 && !selectedTagIds.folder_paths_str?.trim()">
         <div class="no-res-hint">
           <p class="hint">{{ $t('tagSearchNoResultsMessage') }}</p>
-          <AButton @click="openRebuildImageIndexModal()" type="primary">{{ $t('rebuildImageIndex') }}</AButton>
+          <v-btn @click="openRebuildImageIndexModal()" color="primary">{{ $t('rebuildImageIndex') }}</v-btn>
         </div>
       </div>
       <div v-if="previewing" class="preview-switch">
@@ -191,7 +187,6 @@ const onTiktokViewClick = () => {
           :class="{ disable: !canPreview('next') }"
         />
       </div>
-    </ASpin>
     <fullScreenContextMenu
       v-if="previewing && images && images[previewIdx]"
       :file="images[previewIdx]"

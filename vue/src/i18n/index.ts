@@ -4,11 +4,6 @@ import { en } from './en'
 import { de } from './de'
 import { zhHant } from './zh-hant'
 
-declare module 'vue' {
-  export interface ComponentCustomProperties {
-    $t(key: keyof IIBI18nMap, ...args: []): string
-  }
-}
 
 export const getPreferredLang = () => {
   const lang = navigator.language.toLowerCase()

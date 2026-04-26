@@ -4,12 +4,10 @@ import { t } from '@/i18n'
 import { DatabaseOutlined } from '@/icon'
 import { TagSearchTabPane, FuzzySearchTabPane, FileTransferTabPane, EmptyStartTabPane } from '@/store/useGlobalStore'
 import { copy2clipboardI18n, makeAsyncFunctionSingle, useGlobalEventListen } from '@/util'
-import { message, Modal } from 'ant-design-vue'
+import { uiDialog, uiMessage } from '@/ui'
 import { ref, watch, onMounted, h, computed, onUnmounted } from 'vue'
 import { delay, ok, Task, useWatchDocument } from 'vue3-ts-util'
 import { useHookShareState, stackCache, global } from '.'
-import NumInput from '@/components/numInput.vue'
-
 import * as Path from '@/util/path'
 import type Progress from 'nprogress'
 // @ts-ignore
@@ -208,7 +206,7 @@ export function useLocation () {
         await openNext(target)
       }
     } catch (error) {
-      message.error(t('moveFailedCheckPath') + (error instanceof Error ? error.message : ''))
+      uiMessage.error(t('moveFailedCheckPath') + (error instanceof Error ? error.message : ''))
       console.error(dir, Path.splitPath(dir), currPage.value)
       stack.value = backup
       throw error
@@ -229,7 +227,7 @@ export function useLocation () {
 
       deletedFiles.value.clear()
       scroller.value?.scrollToItem(0)
-      message.success(t('refreshCompleted'))
+      uiMessage.success(t('refreshCompleted'))
     } finally {
       np.value?.done()
     }
@@ -250,16 +248,7 @@ export function useLocation () {
         currpos < global.autoRefreshWalkModePosLimit &&
         await walker.value.isExpired()) {
         const taskCancelled = ref(false)
-        const onDisable = () => {
-          taskCancelled.value = true
-          global.autoRefreshWalkMode = false
-          hide()
-          message.success(t('walkModeAutoRefreshDisabled'))
-        }
-        const hide = message.loading(h('span', {}, [
-          t('autoUpdate'),
-          h('span', { onClick: onDisable, style: { paddingLeft: '16px', cursor: 'pointer', color: 'var(--primary-color)' } }, t('disable'))
-        ]), 0)
+        uiMessage.info(t('autoUpdate'))
         try {
           const updatePromsie = new Promise<void>(resolve => {
             walker.value!.seamlessRefresh(currpos, taskCancelled).then((newWalker) => {
@@ -271,7 +260,7 @@ export function useLocation () {
           })
           await Promise.all([updatePromsie, delay(1500)]) // 最少显示1.5s
         } finally {
-          hide()
+          // noop
         }
       }
       return
@@ -285,7 +274,7 @@ export function useLocation () {
       const currFiles = last(stack.value)!.files
       if (currFiles.map((v) => v.date).join() !== files.map((v) => v.date).join()) {
         last(stack.value)!.files = files
-        message.success(t('autoUpdate'))
+        uiMessage.success(t('autoUpdate'))
       }
     } finally {
       np.value?.done()
@@ -352,7 +341,7 @@ export function useLocation () {
   }
 
   useWatchDocument('click', (e) => {
-    if (!(e.target as HTMLElement)?.className?.includes?.('ant-input')) {
+    if (!(e.target as HTMLElement)?.className?.includes?.('iib-location-input')) {
       isLocationEditing.value = false
     }
   })
@@ -446,27 +435,13 @@ const usePollRefresh = (lazyRefresh: () => Promise<any>) => {
       clearCbs.value = []
       return
     }
-    Modal.confirm({
+    uiDialog.confirm({
       title: t('pollRefresh'),
-      width: 640,
-      content: () => h('div', {}, [
-        h('p', { class: 'uni-desc primary-bg' }, t('pollRefreshTip')),
-        h('div', { style: { display: 'flex', alignItems: 'center', gap: '4px' } }, [
-          h('span', {}, t('pollInterval') + '(s): '),
-          h(NumInput as any, {
-            min: 1,
-            max: 60 * 10,
-            modelValue: interval.value,
-            'onUpdate:modelValue': (v: number) => {
-              interval.value = v
-            }
-          })
-        ])
-      ]),
-      onOk: () => {
-        const { clearTask } = Task.run({ pollInterval: interval.value * 1000, action: lazyRefresh })
-        clearCbs.value.push(clearTask)
-      }
+      message: `${t('pollRefreshTip')}\n\n${t('pollInterval')}: ${interval.value}s`,
+    }).then((confirmed) => {
+      if (!confirmed) return
+      const { clearTask } = Task.run({ pollInterval: interval.value * 1000, action: lazyRefresh })
+      clearCbs.value.push(clearTask)
     })
   }
   return {
