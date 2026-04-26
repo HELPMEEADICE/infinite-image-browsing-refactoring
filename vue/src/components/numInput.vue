@@ -5,8 +5,8 @@ const props = defineProps<{ min: number, max: number, step: number }>()
 </script>
 <template>
   <div class="num-input">
-    <a-input-number v-model:value="model" v-bind="props" />
-    <a-slider v-model:value="model" v-bind="props" class="slide"/>
+    <v-text-field v-model="model" type="number" v-bind="props" hide-details density="compact" />
+    <v-slider v-model="model" v-bind="props" class="slide" hide-details />
   </div>
 </template>
 <style lang="scss" scoped>

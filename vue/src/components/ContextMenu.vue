@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import type { Tag } from '@/api/db'
 import type { FileNodeInfo } from '@/api/files'
-import type { MenuInfo } from 'ant-design-vue/lib/menu/src/interface'
 import { isMediaFile } from '@/util'
 import { StarFilled, StarOutlined } from '@/icon'
 import { useGlobalStore } from '@/store/useGlobalStore'
 import { computed } from 'vue'
+
+export interface ContextMenuInfo {
+  key: string
+}
+
 const global = useGlobalStore()
 const props = defineProps<{
   file: FileNodeInfo
@@ -14,7 +18,7 @@ const props = defineProps<{
   isSelectedMutilFiles?: boolean
 }>()
 const emit = defineEmits<{
-  (type: 'contextMenuClick', e: MenuInfo, file: FileNodeInfo, idx: number): void
+  (type: 'contextMenuClick', e: ContextMenuInfo, file: FileNodeInfo, idx: number): void
 }>()
 
 const tags = computed(() => {
@@ -22,77 +26,74 @@ const tags = computed(() => {
     return [...p, { ...c, selected: !!props.selectedTag.find((v) => v.id === c.id) }]
   }, [] as (Tag & { selected: boolean })[])
 })
+
+const click = (key: string) => emit('contextMenuClick', { key }, props.file, props.idx)
 </script>
 <template>
-  <a-menu @click="emit('contextMenuClick', $event, file, idx)">
-    <a-menu-item key="deleteFiles">{{ $t('deleteSelected') }}</a-menu-item>
-    <a-menu-item key="openWithDefaultApp">{{ $t('openWithDefaultApp') }}</a-menu-item>
-    <a-menu-item key="saveSelectedAsJson">{{ $t('saveSelectedAsJson') }}</a-menu-item>
+  <v-list density="compact" min-width="260">
+    <v-list-item @click="click('deleteFiles')"><v-list-item-title>{{ $t('deleteSelected') }}</v-list-item-title></v-list-item>
+    <v-list-item @click="click('openWithDefaultApp')"><v-list-item-title>{{ $t('openWithDefaultApp') }}</v-list-item-title></v-list-item>
+    <v-list-item @click="click('saveSelectedAsJson')"><v-list-item-title>{{ $t('saveSelectedAsJson') }}</v-list-item-title></v-list-item>
     <template v-if="file.type === 'dir'">
-      <a-menu-item key="openInNewTab">{{ $t('openInNewTab') }}</a-menu-item>
-      <a-menu-item key="openOnTheRight">{{ $t('openOnTheRight') }}</a-menu-item>
-      <a-menu-item key="openWithWalkMode">{{ $t('openWithWalkMode') }}</a-menu-item>
+      <v-list-item @click="click('openInNewTab')"><v-list-item-title>{{ $t('openInNewTab') }}</v-list-item-title></v-list-item>
+      <v-list-item @click="click('openOnTheRight')"><v-list-item-title>{{ $t('openOnTheRight') }}</v-list-item-title></v-list-item>
+      <v-list-item @click="click('openWithWalkMode')"><v-list-item-title>{{ $t('openWithWalkMode') }}</v-list-item-title></v-list-item>
     </template>
     <template v-if="file.type === 'file'">
       <template v-if="isMediaFile(file.name)">
-        <a-menu-item key="viewGenInfo">{{ $t('viewGenerationInfo') }}</a-menu-item>
-        <a-menu-item key="tiktokView">{{ $t('tiktokView') }}</a-menu-item>
-        <a-menu-divider />
+        <v-list-item @click="click('viewGenInfo')"><v-list-item-title>{{ $t('viewGenerationInfo') }}</v-list-item-title></v-list-item>
+        <v-list-item @click="click('tiktokView')"><v-list-item-title>{{ $t('tiktokView') }}</v-list-item-title></v-list-item>
+        <v-divider />
         <template v-if="global.conf?.launch_mode !== 'server'">
-          <a-menu-item key="send2txt2img">{{ $t('sendToTxt2img') }}</a-menu-item>
-          <a-menu-item key="send2img2img">{{ $t('sendToImg2img') }}</a-menu-item>
-          <a-menu-item key="send2inpaint">{{ $t('sendToInpaint') }}</a-menu-item>
-          <a-menu-item key="send2extras">{{ $t('sendToExtraFeatures') }}</a-menu-item>
-          <a-sub-menu key="sendToThirdPartyExtension" :title="$t('sendToThirdPartyExtension')">
-            <a-menu-item key="send2controlnet-txt2img">ControlNet - {{ $t('t2i') }}</a-menu-item>
-            <a-menu-item key="send2controlnet-img2img">ControlNet - {{ $t('i2i') }}</a-menu-item>
-            <a-menu-item key="send2outpaint">openOutpaint</a-menu-item>
-          </a-sub-menu>
+          <v-list-item @click="click('send2txt2img')"><v-list-item-title>{{ $t('sendToTxt2img') }}</v-list-item-title></v-list-item>
+          <v-list-item @click="click('send2img2img')"><v-list-item-title>{{ $t('sendToImg2img') }}</v-list-item-title></v-list-item>
+          <v-list-item @click="click('send2inpaint')"><v-list-item-title>{{ $t('sendToInpaint') }}</v-list-item-title></v-list-item>
+          <v-list-item @click="click('send2extras')"><v-list-item-title>{{ $t('sendToExtraFeatures') }}</v-list-item-title></v-list-item>
+          <v-list-group value="sendToThirdPartyExtension">
+            <template #activator="{ props: p }"><v-list-item v-bind="p" :title="$t('sendToThirdPartyExtension')" /></template>
+            <v-list-item @click="click('send2controlnet-txt2img')"><v-list-item-title>ControlNet - {{ $t('t2i') }}</v-list-item-title></v-list-item>
+            <v-list-item @click="click('send2controlnet-img2img')"><v-list-item-title>ControlNet - {{ $t('i2i') }}</v-list-item-title></v-list-item>
+            <v-list-item @click="click('send2outpaint')"><v-list-item-title>openOutpaint</v-list-item-title></v-list-item>
+          </v-list-group>
         </template>
-
-        <a-menu-item key="send2BatchDownload">{{ $t('sendToBatchDownload') }}</a-menu-item>
-
-        <a-sub-menu key="copy2target" :title="$t('copyTo')">
-          <a-menu-item v-for="path in global.quickMovePaths" :key="`copy-to-${path.dir}`">{{ path.zh }}
-          </a-menu-item>
-
-        </a-sub-menu>
-        <a-sub-menu key="move2target" :title="$t('moveTo')">
-          <a-menu-item v-for="path in global.quickMovePaths" :key="`move-to-${path.dir}`">{{ path.zh }}
-          </a-menu-item>
-        </a-sub-menu>
-
-        <a-menu-divider />
-
+        <v-list-item @click="click('send2BatchDownload')"><v-list-item-title>{{ $t('sendToBatchDownload') }}</v-list-item-title></v-list-item>
+        <v-list-group value="copy2target">
+          <template #activator="{ props: p }"><v-list-item v-bind="p" :title="$t('copyTo')" /></template>
+          <v-list-item v-for="path in global.quickMovePaths" :key="`copy-to-${path.dir}`" @click="click(`copy-to-${path.dir}`)"><v-list-item-title>{{ path.zh }}</v-list-item-title></v-list-item>
+        </v-list-group>
+        <v-list-group value="move2target">
+          <template #activator="{ props: p }"><v-list-item v-bind="p" :title="$t('moveTo')" /></template>
+          <v-list-item v-for="path in global.quickMovePaths" :key="`move-to-${path.dir}`" @click="click(`move-to-${path.dir}`)"><v-list-item-title>{{ path.zh }}</v-list-item-title></v-list-item>
+        </v-list-group>
+        <v-divider />
         <template v-if="isSelectedMutilFiles">
-          <a-sub-menu key="batch-add-tag" :title="$t('batchAddTag')">
-            <a-menu-item key="add-custom-tag" >+ {{ $t('addNewCustomTag') }}</a-menu-item>
-            <a-menu-item v-for="tag in tags" :key="`batch-add-tag-${tag.id}`">{{ tag.name }}
-            </a-menu-item>
-          </a-sub-menu>
-          <a-sub-menu key="batch-remove-tag" :title="$t('batchRemoveTag')">
-            <a-menu-item v-for="tag in tags" :key="`batch-remove-tag-${tag.id}`">{{ tag.name }}
-            </a-menu-item>
-          </a-sub-menu>
+          <v-list-group value="batch-add-tag">
+            <template #activator="{ props: p }"><v-list-item v-bind="p" :title="$t('batchAddTag')" /></template>
+            <v-list-item @click="click('add-custom-tag')"><v-list-item-title>+ {{ $t('addNewCustomTag') }}</v-list-item-title></v-list-item>
+            <v-list-item v-for="tag in tags" :key="`batch-add-tag-${tag.id}`" @click="click(`batch-add-tag-${tag.id}`)"><v-list-item-title>{{ tag.name }}</v-list-item-title></v-list-item>
+          </v-list-group>
+          <v-list-group value="batch-remove-tag">
+            <template #activator="{ props: p }"><v-list-item v-bind="p" :title="$t('batchRemoveTag')" /></template>
+            <v-list-item v-for="tag in tags" :key="`batch-remove-tag-${tag.id}`" @click="click(`batch-remove-tag-${tag.id}`)"><v-list-item-title>{{ tag.name }}</v-list-item-title></v-list-item>
+          </v-list-group>
         </template>
-        <a-sub-menu v-else key="toggle-tag" :title="$t('toggleTag')">
-          <a-menu-item key="add-custom-tag" >+ {{ $t('addNewCustomTag') }}</a-menu-item>
-          <a-menu-item v-for="tag in tags" :key="`toggle-tag-${tag.id}`">{{ tag.name }} <star-filled
-              v-if="tag.selected" /><star-outlined v-else />
-          </a-menu-item>
-        </a-sub-menu>
-        <a-menu-divider />
-        <a-menu-item key="openFileLocationInNewTab">{{ $t('openFileLocationInNewTab') }}</a-menu-item>
-        <a-menu-item key="openWithLocalFileBrowser">{{ $t('openWithLocalFileBrowser') }}</a-menu-item>
+        <v-list-group v-else value="toggle-tag">
+          <template #activator="{ props: p }"><v-list-item v-bind="p" :title="$t('toggleTag')" /></template>
+          <v-list-item @click="click('add-custom-tag')"><v-list-item-title>+ {{ $t('addNewCustomTag') }}</v-list-item-title></v-list-item>
+          <v-list-item v-for="tag in tags" :key="`toggle-tag-${tag.id}`" @click="click(`toggle-tag-${tag.id}`)">
+            <v-list-item-title>{{ tag.name }} <star-filled v-if="tag.selected" /><star-outlined v-else /></v-list-item-title>
+          </v-list-item>
+        </v-list-group>
+        <v-divider />
+        <v-list-item @click="click('openFileLocationInNewTab')"><v-list-item-title>{{ $t('openFileLocationInNewTab') }}</v-list-item-title></v-list-item>
+        <v-list-item @click="click('openWithLocalFileBrowser')"><v-list-item-title>{{ $t('openWithLocalFileBrowser') }}</v-list-item-title></v-list-item>
       </template>
-      
-      <a-menu-divider />
-      <a-menu-item key="rename" >{{ $t('rename') }}</a-menu-item>
-      <a-menu-item key="previewInNewWindow">{{ $t('previewInNewWindow') }}</a-menu-item>
-      <a-menu-item key="download">{{ $t('download') }}</a-menu-item>
-      <a-menu-item key="copyPreviewUrl">{{ $t('copySourceFilePreviewLink') }}</a-menu-item>
-      <a-menu-item key="copyFilePath">{{ $t('copyFilePath') }}</a-menu-item>
-
+      <v-divider />
+      <v-list-item @click="click('rename')"><v-list-item-title>{{ $t('rename') }}</v-list-item-title></v-list-item>
+      <v-list-item @click="click('previewInNewWindow')"><v-list-item-title>{{ $t('previewInNewWindow') }}</v-list-item-title></v-list-item>
+      <v-list-item @click="click('download')"><v-list-item-title>{{ $t('download') }}</v-list-item-title></v-list-item>
+      <v-list-item @click="click('copyPreviewUrl')"><v-list-item-title>{{ $t('copySourceFilePreviewLink') }}</v-list-item-title></v-list-item>
+      <v-list-item @click="click('copyFilePath')"><v-list-item-title>{{ $t('copyFilePath') }}</v-list-item-title></v-list-item>
     </template>
-  </a-menu>
+  </v-list>
 </template>

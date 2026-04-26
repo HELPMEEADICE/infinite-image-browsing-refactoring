@@ -3,10 +3,11 @@
 import { Splitpanes, Pane } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
 import { useGlobalStore, type TabPane } from '@/store/useGlobalStore'
-import { defineAsyncComponent, watch, ref, nextTick } from 'vue'
+import { defineAsyncComponent, watch } from 'vue'
 import { globalEvents, asyncCheck, useGlobalEventListen } from '@/util'
 import { debounce, uniqueId } from 'lodash-es'
 import edgeTrigger from './edgeTrigger.vue'
+import TabBar from './TabBar.vue'
 import { t } from '@/i18n'
 import { tryOnMounted, useDocumentVisibility, type Fn } from '@vueuse/core'
 import ImgSliDrawer from '../ImgSli/ImgSliDrawer.vue'
@@ -35,54 +36,50 @@ const compMap: Record<TabPane['type'], ReturnType<typeof defineAsyncComponent>> 
 }
 const onEdit = (idx: number, targetKey: any, action: string) => {
   const tab = global.tabList[idx]
+  if (!tab) return
   if (action === 'add') {
     const empty: TabPane = { type: 'empty', key: uniqueId(), name: t('emptyStartPage') }
     tab.panes.push(empty)
     tab.key = empty.key
   } else {
-    const paneIdx = tab.panes.findIndex((v) => v.key === targetKey)
-    if (tab.key === targetKey) {
-      // 只有在前台时才跳过去
-      tab.key = tab.panes[paneIdx - 1]?.key ?? tab.panes[1]?.key
-    }
-    tab.panes.splice(paneIdx, 1)
-    if (tab.panes.length === 0) {
-      global.tabList.splice(idx, 1)
-    }
-    if (global.tabList.length === 0) {
-      const pane = global.createEmptyPane()
-      global.tabList.push({ panes: [pane], key: pane.key, id: uniqueId() })
-    }
+    global.removePaneFromTab(idx, targetKey)
+  }
+}
+
+const onDragStart = (tabIdx: number, paneIdx: number, e: DragEvent) => {
+  global.dragingTab = { tabIdx, paneIdx }
+  e.dataTransfer?.setData('text/plain', JSON.stringify({ tabIdx, paneIdx, from: 'tab-drag' }))
+}
+
+const onDragEnd = () => {
+  global.dragingTab = undefined
+}
+
+const onTabContextAction = (tabIdx: number, action: string, pane: TabPane) => {
+  switch (action) {
+    case 'close':
+      global.removePaneFromTab(tabIdx, pane.key)
+      break
+    case 'close-other':
+      global.closeOtherPanes(tabIdx, pane.key)
+      break
+    case 'close-left':
+      global.closePanesByDirection(tabIdx, pane.key, 'left')
+      break
+    case 'close-right':
+      global.closePanesByDirection(tabIdx, pane.key, 'right')
+      break
+    case 'move-right-split':
+      global.movePaneToRightSplit(tabIdx, pane.key)
+      break
   }
 }
 
 useGlobalEventListen('closeTabPane', (tabIdx, key) => onEdit(tabIdx, key, 'del'))
-const container = ref<HTMLDivElement>()
 watch(
   () => global.tabList,
-  async () => {
-    await nextTick()
+  () => {
     global.saveRecord()
-    Array.from(container.value?.querySelectorAll('.splitpanes__pane') ?? []).forEach(
-      (tabEl, tabIdx) => {
-        Array.from(tabEl.querySelectorAll('.ant-tabs-tab') ?? []).forEach((paneEl, paneIdx) => {
-          const el = paneEl as HTMLDivElement
-          el.setAttribute('draggable', 'true')
-          el.setAttribute('tabIdx', tabIdx.toString())
-          el.setAttribute('paneIdx', paneIdx.toString())
-          el.ondragend = () => {
-            global.dragingTab = undefined
-          }
-          el.ondragstart = (e) => {
-            global.dragingTab = { tabIdx, paneIdx }
-            e.dataTransfer!.setData(
-              'text/plain',
-              JSON.stringify({ tabIdx, paneIdx, from: 'tab-drag' })
-            )
-          }
-        })
-      }
-    )
   },
   { immediate: true, deep: true }
 )
@@ -106,15 +103,30 @@ watch(useDocumentVisibility(), v => v && emitReturnToIIB())
 
 </script>
 <template>
-  <div ref="container">
+  <div>
     <splitpanes class="default-theme">
       <pane v-for="(tab, tabIdx) in global.tabList" :key="tab.id">
         <edge-trigger :tabIdx="tabIdx">
-          <a-tabs type="editable-card" v-model:activeKey="tab.key" @edit="(key:any, act:any) => onEdit(tabIdx, key, act)">
-            <a-tab-pane v-for="(pane, paneIdx) in tab.panes" :key="pane.key" :tab="pane.name" class="pane">
+          <div class="tab-shell">
+            <TabBar
+              :tab="tab"
+              :tab-idx="tabIdx"
+              @activate="tab.key = $event"
+              @add="onEdit(tabIdx, '', 'add')"
+              @close="onEdit(tabIdx, $event, 'del')"
+              @drag-start="onDragStart(tabIdx, $event.paneIdx, $event.event)"
+              @drag-end="onDragEnd"
+              @context-action="onTabContextAction(tabIdx, $event.key, $event.pane)"
+            />
+            <div
+              v-for="(pane, paneIdx) in tab.panes"
+              v-show="tab.key === pane.key"
+              :key="pane.key"
+              class="pane"
+            >
               <component :is="compMap[pane.type]" :tabIdx="tabIdx" :paneKey="pane.key" :paneIdx="paneIdx" v-bind="pane" />
-            </a-tab-pane>
-          </a-tabs>
+            </div>
+          </div>
         </edge-trigger>
       </pane>
     </splitpanes>
@@ -133,8 +145,14 @@ watch(useDocumentVisibility(), v => v && emitReturnToIIB())
   }
 }
 
+.tab-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 .pane {
-  height: calc(100vh - 40px);
-  --pane-max-height: calc(100vh - 40px);
+  height: calc(100vh - 42px);
+  --pane-max-height: calc(100vh - 42px);
 }
 </style>

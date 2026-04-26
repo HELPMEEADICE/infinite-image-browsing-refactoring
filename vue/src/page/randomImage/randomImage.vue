@@ -15,7 +15,7 @@ import MultiSelectKeep from '@/components/MultiSelectKeep.vue'
 
 import { LeftCircleOutlined, RightCircleOutlined } from '@/icon'
 import { copy2clipboardI18n } from '@/util'
-import { message } from 'ant-design-vue'
+import { uiMessage } from '@/ui'
 import { t } from '@/i18n'
 import { useLocalStorage } from '@vueuse/core'
 import { prefix } from '@/util/const'
@@ -39,11 +39,7 @@ const hasShownNotification = useLocalStorage(`${prefix}randomImageSettingNotific
 // 显示一次性通知
 const showRandomImageSettingNotification = () => {
   if (!hasShownNotification.value) {
-    message.info({
-      content: t('randomImageSettingNotification'),
-      duration: 6,
-      key: 'randomImageSetting'
-    })
+    uiMessage.info(t('randomImageSettingNotification'), 6000)
     hasShownNotification.value = true
   }
 }
@@ -53,7 +49,7 @@ const fetch = async () => {
     loading.value = true
     const res = await getRandomImages()
     if (res.length === 0) {
-      message.warn('No data, please generate index in image search page first')
+      uiMessage.warning('No data, please generate index in image search page first')
     }
     files.value = res
   } finally {
@@ -65,7 +61,7 @@ const fetch = async () => {
 // TikTok View 按钮点击处理
 const onTiktokViewClick = () => {
   if (files.value.length === 0) {
-    message.warn('没有图片可以浏览')
+    uiMessage.warning('没有图片可以浏览')
     return
   }
   // 从当前预览索引开始，如果没有预览则从第一张开始
@@ -104,29 +100,26 @@ const onContextMenuClickU: typeof onContextMenuClick = async (e, file, idx) => {
     <MultiSelectKeep :show="!!multiSelectedIdxs.length || g.keepMultiSelect" @clear-all-selected="onClearAllSelected"
       @select-all="onSelectAll" @reverse-select="onReverseSelect" />
     <div class="refresh-button">
-      <a-button 
-        @click="fetch" 
+      <v-btn
+        @click="fetch"
         @touchstart.prevent="fetch"
-        type="primary" 
-        :loading="loading" 
-        shape="round"
+        color="primary"
+        :loading="loading"
+        rounded
       >
         {{ $t('shuffle') }}
-      </a-button>
-      <a-button 
-        @click="onTiktokViewClick" 
+      </v-btn>
+      <v-btn
+        @click="onTiktokViewClick"
         @touchstart.prevent="onTiktokViewClick"
-        type="default" 
-        :disabled="!files?.length" 
-        shape="round"
+        :disabled="!files?.length"
+        rounded
       >
         {{ $t('tiktokView') }}
-      </a-button>
+      </v-btn>
     </div>
     
-    <AModal v-model:visible="showGenInfo" width="70vw" mask-closable @ok="showGenInfo = false">
-      <template #cancelText />
-      <ASkeleton active :loading="!genInfoQueue.isIdle">
+    <v-dialog v-model="showGenInfo" width="70vw" @click:outside="showGenInfo = false">
         <div style="
               width: 100%;
               word-break: break-all;
@@ -137,8 +130,7 @@ const onContextMenuClickU: typeof onContextMenuClick = async (e, file, idx) => {
           <div class="hint">{{ $t('doubleClickToCopy') }}</div>
           {{ imageGenInfo }}
         </div>
-      </ASkeleton>
-    </AModal>
+    </v-dialog>
     <RecycleScroller ref="scroller" class="file-list" :items="files.slice()" :item-size="itemSize.first"
       key-field="fullpath" :item-secondary-size="itemSize.second" :gridItems="gridItems" @scroll="onScroll">
       <template v-slot="{ item: file, index: idx }">

@@ -3,7 +3,7 @@
  * Handles starting organize jobs and polling for status
  */
 
-import { message } from 'ant-design-vue'
+import { uiMessage } from '@/ui'
 import { t } from '@/i18n'
 import { useGlobalStore } from '@/store/useGlobalStore'
 import { startOrganizeFiles, getOrganizeFilesStatus } from '@/api/organize'
@@ -71,14 +71,14 @@ export async function startSmartOrganizeWithConfig(
       folder_paths: paths
     })
 
-    message.success(t('organizeJobStarted'))
+    uiMessage.success(t('organizeJobStarted'))
 
     // Start polling for status
     pollOrganizeStatus(job_id, paths)
 
     return job_id
   } catch (e: any) {
-    message.error(`${t('error')}: ${e.message || e}`)
+    uiMessage.error(`${t('error')}: ${e.message || e}`)
     throw e
   }
 }

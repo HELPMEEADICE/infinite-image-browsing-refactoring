@@ -2,14 +2,14 @@
   <div v-if="availableTips.length > 0" class="tips-carousel">
     <transition name="tip-fade" mode="out-in">
       <div :key="currentIndex" class="tip-content">
-        <a-tag :color="getTipColor(currentTip.type)" class="tip-tag">
+        <v-chip :color="getTipColor(currentTip.type)" class="tip-tag" size="x-small">
           {{ currentTip.title }}
-        </a-tag>
+        </v-chip>
         <span class="tip-text">{{ currentTip.content }}</span>
         <div v-if="currentTip.type === 'warning'" class="tip-actions">
-          <a-button size="small" type="link" @click="dismissCurrentTip">
+          <v-btn size="small" variant="text" @click="dismissCurrentTip">
             {{ t('dontShowAgain') }}
-          </a-button>
+          </v-btn>
         </div>
       </div>
     </transition>

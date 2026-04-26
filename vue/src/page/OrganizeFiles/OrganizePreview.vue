@@ -23,78 +23,79 @@
     </div>
 
     <!-- Cluster list -->
-    <a-collapse v-model:activeKey="activeKeys" class="cluster-list">
-      <a-collapse-panel
+    <v-expansion-panels v-model="activeKeys" multiple class="cluster-list">
+      <v-expansion-panel
         v-for="cluster in allClusters"
         :key="cluster.cluster_id"
         :class="{ 'skipped': skippedIds.has(cluster.cluster_id) }"
       >
-        <template #header>
+        <v-expansion-panel-title>
           <div class="cluster-header">
             <span class="folder-icon">📁</span>
             <span class="folder-name" v-if="editingId !== cluster.cluster_id">
               {{ getFolderName(cluster) }}
             </span>
-            <a-input
+            <v-text-field
               v-else
-              v-model:value="editingName"
-              size="small"
+              v-model="editingName"
+              density="compact"
               style="width: 200px"
-              @pressEnter="saveEdit"
+              @keydown.enter="saveEdit"
               @blur="saveEdit"
               @click.stop
+              hide-details
             />
             <span class="file-count">({{ cluster.size }} {{ t('files') }})</span>
-            <a-tag v-if="cluster.cluster_id === '__noise__'" color="orange">{{ t('unsorted') }}</a-tag>
+            <v-chip v-if="cluster.cluster_id === '__noise__'" color="orange" size="small">{{ t('unsorted') }}</v-chip>
           </div>
-        </template>
+          <template #actions>
+            <div class="d-flex ga-2" @click.stop>
+              <v-btn size="small" variant="text" @click="startEdit(cluster)">
+                {{ t('rename') }}
+              </v-btn>
+              <v-btn
+                size="small"
+                :color="skippedIds.has(cluster.cluster_id) ? 'primary' : undefined"
+                @click="toggleSkip(cluster.cluster_id)"
+              >
+                {{ skippedIds.has(cluster.cluster_id) ? t('cancelSkip') : t('skip') }}
+              </v-btn>
+            </div>
+          </template>
+        </v-expansion-panel-title>
 
-        <template #extra>
-          <a-space @click.stop>
-            <a-button size="small" @click="startEdit(cluster)">
-              {{ t('rename') }}
-            </a-button>
-            <a-button
-              size="small"
-              :type="skippedIds.has(cluster.cluster_id) ? 'primary' : 'default'"
-              @click="toggleSkip(cluster.cluster_id)"
+        <v-expansion-panel-text>
+          <div class="file-mappings">
+            <div
+              v-for="m in getVisibleMappings(cluster)"
+              :key="m.src_path"
+              class="file-mapping"
             >
-              {{ skippedIds.has(cluster.cluster_id) ? t('cancelSkip') : t('skip') }}
-            </a-button>
-          </a-space>
-        </template>
+              <span
+                class="src-path"
+                @mouseenter="showImagePreview($event, m.src_path)"
+                @mouseleave="hideImagePreview"
+                @mousemove="updateTooltipPos($event)"
+              >
+                {{ getFileName(m.src_path) }}
+              </span>
+              <span class="arrow">→</span>
+              <span class="dest-path" :title="m.dest_path">
+                {{ getFolderName(cluster) }}/{{ getFileName(m.src_path) }}
+              </span>
+            </div>
 
-        <!-- File mappings -->
-        <div class="file-mappings">
-          <div
-            v-for="m in getVisibleMappings(cluster)"
-            :key="m.src_path"
-            class="file-mapping"
-          >
-            <span
-              class="src-path"
-              @mouseenter="showImagePreview($event, m.src_path)"
-              @mouseleave="hideImagePreview"
-              @mousemove="updateTooltipPos($event)"
+            <div
+              v-if="cluster.file_mappings.length > 10 && !expandedClusters.has(cluster.cluster_id)"
+              class="show-more"
+              @click="expandedClusters.add(cluster.cluster_id)"
             >
-              {{ getFileName(m.src_path) }}
-            </span>
-            <span class="arrow">→</span>
-            <span class="dest-path" :title="m.dest_path">
-              {{ getFolderName(cluster) }}/{{ getFileName(m.src_path) }}
-            </span>
+              {{ t('showMore', { count: cluster.file_mappings.length - 10 }) }}
+            </div>
           </div>
-
-          <div
-            v-if="cluster.file_mappings.length > 10 && !expandedClusters.has(cluster.cluster_id)"
-            class="show-more"
-            @click="expandedClusters.add(cluster.cluster_id)"
-          >
-            {{ t('showMore', { count: cluster.file_mappings.length - 10 }) }}
-          </div>
-        </div>
-      </a-collapse-panel>
-    </a-collapse>
+        </v-expansion-panel-text>
+      </v-expansion-panel>
+    </v-expansion-panels>
 
     <!-- Actions -->
     <div class="preview-actions">
@@ -102,12 +103,12 @@
         {{ t('willMove', { count: effectiveFileCount }) }}
         <span v-if="skippedIds.size">({{ t('skipped', { count: skippedFileCount }) }})</span>
       </div>
-      <a-space>
-        <a-button @click="cancel">{{ t('cancel') }}</a-button>
-        <a-button type="primary" :loading="confirming" @click="confirm">
+      <div class="d-flex ga-2">
+        <v-btn @click="cancel">{{ t('cancel') }}</v-btn>
+        <v-btn color="primary" :loading="confirming" @click="confirm">
           {{ t('confirmOrganize') }}
-        </a-button>
-      </a-space>
+        </v-btn>
+      </div>
     </div>
   </div>
 </template>
@@ -117,7 +118,7 @@ import { ref, computed, reactive } from 'vue'
 import { t } from '@/i18n'
 import type { OrganizeFilesPreviewResp, OrganizePreviewCluster, OrganizeFolderEdit } from '@/api/organize'
 import { confirmOrganizeFiles } from '@/api/organize'
-import { message } from 'ant-design-vue'
+import { uiMessage } from '@/ui'
 import { apiBase } from '@/api'
 
 const props = defineProps<{
@@ -265,10 +266,10 @@ const confirm = async () => {
       skip_cluster_ids: skippedIds.size > 0 ? Array.from(skippedIds) : undefined
     })
 
-    message.success(t('startMovingFiles'))
+    uiMessage.success(t('startMovingFiles'))
     emit('confirmed')
   } catch (e: any) {
-    message.error(`${t('confirmFailed')}: ${e.message || e}`)
+    uiMessage.error(`${t('confirmFailed')}: ${e.message || e}`)
   } finally {
     confirming.value = false
   }

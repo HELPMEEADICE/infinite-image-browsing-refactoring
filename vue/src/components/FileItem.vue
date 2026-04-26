@@ -5,7 +5,7 @@ import { fallbackImage, ok } from 'vue3-ts-util'
 import type { FileNodeInfo } from '@/api/files'
 import { isImageFile, isVideoFile, isAudioFile } from '@/util'
 import { toImageThumbnailUrl, toVideoCoverUrl, toRawFileUrl } from '@/util/file'
-import type { MenuInfo } from 'ant-design-vue/lib/menu/src/interface'
+import type { ContextMenuInfo } from './ContextMenu.vue'
 import { computed, ref, nextTick, watch } from 'vue'
 import ContextMenu from './ContextMenu.vue'
 import ChangeIndicator from './ChangeIndicator.vue'
@@ -71,7 +71,7 @@ const emit = defineEmits<{
   'dragend': [event: DragEvent, idx: number],
   'dropToFolder': [event: DragEvent, file: FileNodeInfo, idx: number],
   'previewVisibleChange': [value: boolean, last: boolean],
-  'contextMenuClick': [e: MenuInfo, file: FileNodeInfo, idx: number],
+  'contextMenuClick': [e: ContextMenuInfo, file: FileNodeInfo, idx: number],
   'close-icon-click': [],
   'tiktokView': [file: FileNodeInfo, idx: number]
 }>()
@@ -95,7 +95,27 @@ const likeTag = computed(() => tags.value.find(v => v.type === 'custom' && v.nam
 
 const taggleLikeTag = () => {
   ok(likeTag.value)
-  emit('contextMenuClick', { key: `toggle-tag-${likeTag.value.id}` } as MenuInfo, props.file, props.idx)
+  emit('contextMenuClick', { key: `toggle-tag-${likeTag.value.id}` }, props.file, props.idx)
+}
+
+const contextMenuOpen = ref(false)
+const tagMenuOpen = ref(false)
+const mainMenuX = ref(0)
+const mainMenuY = ref(0)
+
+const openContextMenu = (event: MouseEvent) => {
+  if (!props.enableRightClickMenu) return
+  event.preventDefault()
+  if (global.longPressOpenContextMenu && props.showMenuIdx !== props.idx) return
+  mainMenuX.value = event.clientX
+  mainMenuY.value = event.clientY
+  contextMenuOpen.value = true
+  emit('update:showMenuIdx', props.idx)
+}
+
+const closeContextMenu = () => {
+  contextMenuOpen.value = false
+  emit('update:showMenuIdx', -1)
 }
 
 const minShowDetailWidth = 160
@@ -246,13 +266,12 @@ const handleAudioClick = () => {
 }
 </script>
 <template>
-  <a-dropdown :trigger="['contextmenu']" :visible="!global.longPressOpenContextMenu ? undefined : typeof idx === 'number' && showMenuIdx === idx
-    " @update:visible="(v: boolean) => typeof idx === 'number' && emit('update:showMenuIdx', v ? idx : -1)">
-    <li class="file file-item-trigger grid" :class="{
+  <li class="file file-item-trigger grid" :class="{
     clickable: file.type === 'dir',
     selected
   }" :data-idx="idx" :key="file.name" draggable="true" @dragstart="emit('dragstart', $event, idx)"
       @dragend="emit('dragend', $event, idx)" @dragover="handleDragOver" @drop="handleDrop"
+      @contextmenu="openContextMenu"
       @click.capture="handleFileClick($event)">
 
       <div>
@@ -260,29 +279,31 @@ const handleAudioClick = () => {
           <close-circle-outlined />
         </div>
         <div class="more" v-if="enableRightClickMenu">
-          <a-dropdown>
-            <div class="float-btn-wrap">
-              <ellipsis-outlined />
-            </div>
-            <template #overlay>
-              <context-menu :file="file" :idx="idx" :selected-tag="customTags"
-                @context-menu-click="(e, f, i) => emit('contextMenuClick', e, f, i)"
-                :is-selected-mutil-files="isSelectedMutilFiles" />
+          <v-menu v-model="contextMenuOpen" :scrim="false" :close-on-content-click="true" location-strategy="connected" :target="[mainMenuX, mainMenuY]" @update:model-value="(v) => !v && closeContextMenu()">
+            <template #activator="{ props: menuProps }">
+              <div v-bind="menuProps" class="float-btn-wrap" @click.stop="contextMenuOpen = true">
+                <ellipsis-outlined />
+              </div>
             </template>
-          </a-dropdown>
-          <a-dropdown v-if="file.type === 'file'">
-            <div class="float-btn-wrap" :class="{ 'like-selected': likeTag?.selected }" @click="taggleLikeTag">
-              <HeartFilled v-if="likeTag?.selected" />
-              <HeartOutlined v-else />
-            </div>
-            <template #overlay>
-              <a-menu @click="emit('contextMenuClick', $event, file, idx)" v-if="tags.length > 1">
-                <a-menu-item v-for="tag in tags" :key="`toggle-tag-${tag.id}`">{{ tag.name }}
+            <context-menu :file="file" :idx="idx" :selected-tag="customTags"
+              @context-menu-click="(e, f, i) => emit('contextMenuClick', e, f, i)"
+              :is-selected-mutil-files="isSelectedMutilFiles" />
+          </v-menu>
+          <v-menu v-if="file.type === 'file' && tags.length > 1" v-model="tagMenuOpen" :scrim="false" :close-on-content-click="true">
+            <template #activator="{ props: tagMenuProps }">
+              <div v-bind="tagMenuProps" class="float-btn-wrap" :class="{ 'like-selected': likeTag?.selected }" @click.stop="taggleLikeTag">
+                <HeartFilled v-if="likeTag?.selected" />
+                <HeartOutlined v-else />
+              </div>
+            </template>
+            <v-list density="compact">
+              <v-list-item v-for="tag in tags" :key="`toggle-tag-${tag.id}`" @click="emit('contextMenuClick', { key: `toggle-tag-${tag.id}` }, file, idx)">
+                <v-list-item-title>{{ tag.name }}
                   <star-filled v-if="tag.selected" /><star-outlined v-else />
-                </a-menu-item>
-              </a-menu>
-            </template>
-          </a-dropdown>
+                </v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
           <DraggableImage size="192px" v-if="file.type === 'file' && isImageFile(file.fullpath)" :file="file">
             <div class="float-btn-wrap">
               <DragOutlined />
@@ -298,14 +319,11 @@ const handleAudioClick = () => {
             :gen-diff-to-next="genDiffToNext" :gen-diff-to-previous="genDiffToPrevious" />
           <!-- change indicators END -->
 
-          <a-image :src="imageSrc" :fallback="fallbackImage" :preview="{
-    src: fullScreenPreviewImageUrl,
-    onVisibleChange: (v: boolean, lv: boolean) => emit('previewVisibleChange', v, lv)
-  }" />
+          <img class="preview-img" :src="imageSrc" :onerror="(e: Event) => ((e.target as HTMLImageElement).src = fallbackImage)" @click.stop="emit('fileItemClick', $event, file, idx)" />
           <div class="tags-container" v-if="customTags && cellWidth > minShowDetailWidth">
-            <a-tag v-for="tag in extraTags ?? customTags" :key="tag.id" :color="tagStore.getColor(tag)">
+            <span v-for="tag in extraTags ?? customTags" :key="tag.id" class="file-tag" :style="{ backgroundColor: tagStore.getColor(tag) }">
               {{ tag.name }}
-            </a-tag>
+            </span>
           </div>
         </div>
         <div :class="[`idx-${idx} item-content video`, { 'playing-inline': isPlayingInline }]" :url="toVideoCoverUrl(file)"
@@ -336,18 +354,18 @@ const handleAudioClick = () => {
             <img :src="play" style="width: 40px;height: 40px;">
           </div>
           <div class="tags-container" v-if="customTags && cellWidth > minShowDetailWidth">
-            <a-tag v-for="tag in customTags" :key="tag.id" :color="tagStore.getColor(tag)">
+            <span v-for="tag in customTags" :key="tag.id" class="file-tag" :style="{ backgroundColor: tagStore.getColor(tag) }">
               {{ tag.name }}
-            </a-tag>
+            </span>
           </div>
         </div>
         <div :class="`idx-${idx} item-content audio`" v-else-if="isAudioFile(file.name)"
           @click="handleAudioClick">
           <div class="audio-icon">🎵</div>
           <div class="tags-container" v-if="customTags && cellWidth > minShowDetailWidth">
-            <a-tag v-for="tag in customTags" :key="tag.id" :color="tagStore.getColor(tag)">
+            <span v-for="tag in customTags" :key="tag.id" class="file-tag" :style="{ backgroundColor: tagStore.getColor(tag) }">
               {{ tag.name }}
-            </a-tag>
+            </span>
           </div>
         </div>
         <div v-else class="preview-icon-wrap">
@@ -374,13 +392,12 @@ const handleAudioClick = () => {
           </div>
         </div>
       </div>
-    </li>
-    <template #overlay>
+    <v-menu v-model="contextMenuOpen" :scrim="false" :close-on-content-click="true" location-strategy="connected" :target="[mainMenuX, mainMenuY]" @update:model-value="(v) => !v && closeContextMenu()">
       <context-menu :file="file" :idx="idx" :selected-tag="customTags" v-if="enableRightClickMenu"
         @context-menu-click="(e, f, i) => emit('contextMenuClick', e, f, i)"
         :is-selected-mutil-files="isSelectedMutilFiles" />
-    </template>
-  </a-dropdown>
+    </v-menu>
+  </li>
 </template>
 <style lang="scss" scoped>
 .center {
@@ -410,6 +427,14 @@ const handleAudioClick = () => {
       width: 100%;
       height: 100%;
       object-fit: contain;
+    }
+
+    .preview-img {
+      width: v-bind('$props.cellWidth + "px"');
+      height: v-bind('$props.cellWidth + "px"');
+      object-fit: cover;
+      border-radius: 8px;
+      display: block;
     }
 
     .inline-play-overlay {
@@ -516,6 +541,13 @@ const handleAudioClick = () => {
       margin: 0 0 4px 4px;
       font-size: 14px;
       line-height: 1.6;
+    }
+
+    .file-tag {
+      color: #fff;
+      padding: 0 6px;
+      border-radius: 4px;
+      font-weight: 600;
     }
   }
 }

@@ -2,7 +2,6 @@
 import { useMouseInElement } from '@vueuse/core'
 import { computed, ref } from 'vue'
 import { useGlobalStore } from '@/store/useGlobalStore'
-import { uniqueId } from 'lodash-es'
 import { safeJsonParse } from '@/util'
 
 const global = useGlobalStore()
@@ -29,22 +28,7 @@ const onDrop = (payload: DragEvent, type: 'add-right' | 'insert') => {
     if (type === 'insert' && from.tabIdx === props.tabIdx) {
       return
     }
-    const tabs = global.tabList
-    const pane = tabs[from.tabIdx].panes[from.paneIdx]
-    tabs[from.tabIdx].panes.splice(from.paneIdx, 1)
-    if (type === 'add-right') {
-      tabs[props.tabIdx].key =
-        tabs[props.tabIdx].panes[from.paneIdx - 1]?.key ?? tabs[props.tabIdx].panes[0].key
-      tabs.splice(props.tabIdx + 1, 0, { panes: [pane], key: pane.key, id: uniqueId() })
-    } else {
-      tabs[from.tabIdx].key =
-        tabs[from.tabIdx].panes[from.paneIdx - 1]?.key ?? tabs[from.tabIdx].panes[0]?.key
-      tabs[props.tabIdx].panes.push(pane)
-      tabs[props.tabIdx].key = pane.key
-    }
-    if (tabs[from.tabIdx].panes.length === 0) {
-      tabs.splice(from.tabIdx, 1)
-    }
+    global.movePane(from.tabIdx, from.paneIdx, props.tabIdx, type)
   }
 }
 </script>

@@ -1,66 +1,81 @@
 <template>
-  <a-modal
-    v-model:visible="globalStore.showSmartOrganizeConfig"
-    :title="t('smartOrganizeConfig')"
+  <v-dialog
+    v-model="globalStore.showSmartOrganizeConfig"
     width="70vw"
-    @ok="handleOk"
-    @cancel="handleCancel"
-    :confirmLoading="loading"
   >
-    <!-- Info panel -->
-    <div class="info-panel">
-      <div class="info-row">
-        <span class="info-label">{{ t('organizeSourceFolder') }}:</span>
-        <code class="info-path">{{ globalStore.smartOrganizeConfigPath }}</code>
-      </div>
-      <div class="info-tips">
-        <span>{{ t('smartOrganizeNotice') }}</span>
-        <span class="separator">|</span>
-        <span>{{ t('topicSearchRequirementsOpenai') }}</span>
-        <span class="separator">|</span>
-        <span>{{ t('topicSearchRequirementsDepsPython') }}</span>
-      </div>
-    </div>
+    <v-card>
+      <v-card-title>{{ t('smartOrganizeConfig') }}</v-card-title>
+      <v-card-text>
+        <!-- Info panel -->
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">{{ t('organizeSourceFolder') }}:</span>
+            <code class="info-path">{{ globalStore.smartOrganizeConfigPath }}</code>
+          </div>
+          <div class="info-tips">
+            <span>{{ t('smartOrganizeNotice') }}</span>
+            <span class="separator">|</span>
+            <span>{{ t('topicSearchRequirementsOpenai') }}</span>
+            <span class="separator">|</span>
+            <span>{{ t('topicSearchRequirementsDepsPython') }}</span>
+          </div>
+        </div>
 
-    <a-form :label-col="{ span: 8 }" :wrapper-col="{ span: 16 }">
-      <!-- Target folder display -->
-      <a-form-item :label="t('organizeTargetFolder')">
-        <a-input v-model:value="config.destFolder" :placeholder="globalStore.smartOrganizeConfigPath" :disabled="loading" />
-        <div class="form-item-hint">{{ t('organizeTargetFolderDesc') }}</div>
-      </a-form-item>
+        <v-row>
+          <v-col cols="4">
+            <v-label>{{ t('organizeTargetFolder') }}</v-label>
+          </v-col>
+          <v-col cols="8">
+            <v-text-field v-model="config.destFolder" :placeholder="globalStore.smartOrganizeConfigPath" :disabled="loading" hide-details density="compact" />
+            <div class="form-item-hint">{{ t('organizeTargetFolderDesc') }}</div>
+          </v-col>
+        </v-row>
 
-      <!-- Recursive option -->
-      <a-form-item :label="t('organizeRecursive')">
-        <a-switch v-model:checked="config.recursive" :disabled="loading" />
-        <div class="form-item-hint">{{ t('organizeRecursiveDesc') }}</div>
-      </a-form-item>
+        <v-row>
+          <v-col cols="4">
+            <v-label>{{ t('organizeRecursive') }}</v-label>
+          </v-col>
+          <v-col cols="8">
+            <v-switch v-model="config.recursive" :disabled="loading" hide-details />
+            <div class="form-item-hint">{{ t('organizeRecursiveDesc') }}</div>
+          </v-col>
+        </v-row>
 
-      <!-- Min cluster size -->
-      <a-form-item :label="t('organizeMinClusterSize')">
-        <a-input-number v-model:value="config.minClusterSize" :min="2" :max="20" style="width: 100px" :disabled="loading" />
-        <div class="form-item-hint">{{ t('organizeMinClusterSizeDesc') }}</div>
-      </a-form-item>
+        <v-row>
+          <v-col cols="4">
+            <v-label>{{ t('organizeMinClusterSize') }}</v-label>
+          </v-col>
+          <v-col cols="8">
+            <v-text-field v-model="config.minClusterSize" type="number" :min="2" :max="20" style="width: 100px" :disabled="loading" hide-details density="compact" />
+            <div class="form-item-hint">{{ t('organizeMinClusterSizeDesc') }}</div>
+          </v-col>
+        </v-row>
 
-      <!-- Action type -->
-      <a-form-item :label="t('organizeAction')">
-        <a-radio-group v-model:value="config.action" :disabled="loading">
-          <a-radio value="move">{{ t('organizeActionMove') }}</a-radio>
-          <a-radio value="copy">{{ t('organizeActionCopy') }}</a-radio>
-        </a-radio-group>
-      </a-form-item>
-    </a-form>
+        <v-row>
+          <v-col cols="4">
+            <v-label>{{ t('organizeAction') }}</v-label>
+          </v-col>
+          <v-col cols="8">
+            <v-radio-group v-model="config.action" :disabled="loading" inline>
+              <v-radio value="move" :label="t('organizeActionMove')"></v-radio>
+              <v-radio value="copy" :label="t('organizeActionCopy')"></v-radio>
+            </v-radio-group>
+          </v-col>
+        </v-row>
 
-    <!-- Loading status -->
-    <div v-if="loading" class="loading-status">
-      <a-spin size="small" />
-      <span style="margin-left: 8px">{{ loadingText }}</span>
-    </div>
+        <!-- Loading status -->
+        <div v-if="loading" class="loading-status">
+          <v-progress-circular indeterminate :size="16" :width="2"></v-progress-circular>
+          <span style="margin-left: 8px">{{ loadingText }}</span>
+        </div>
+      </v-card-text>
 
-    <template #footer>
-      <a-button @click="handleCancel" :disabled="loading">{{ t('organizeCancel') }}</a-button>
-      <a-button type="primary" @click="handleOk" :loading="loading">{{ t('organizeStartTask') }}</a-button>
-    </template>
-  </a-modal>
+      <v-card-actions>
+        <v-btn @click="handleCancel" :disabled="loading">{{ t('organizeCancel') }}</v-btn>
+        <v-btn color="primary" @click="handleOk" :loading="loading">{{ t('organizeStartTask') }}</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup lang="ts">

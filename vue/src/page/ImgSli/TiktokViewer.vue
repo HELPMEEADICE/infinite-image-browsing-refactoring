@@ -12,7 +12,7 @@ import { getImageGenerationInfo, openFolder, openWithDefaultApp } from '@/api'
 import { toRawFileUrl } from '@/util/file'
 import { parse } from '@/util/stable-diffusion-image-metadata'
 import { getParentDirectory } from '@/util/path'
-import { message, Modal } from 'ant-design-vue'
+import { uiMessage, uiDialog } from '@/ui'
 import {
   CloseOutlined,
   FullscreenOutlined,
@@ -326,10 +326,10 @@ const onTagClick = async (tagId: string | number) => {
     const tag = global.conf?.all_custom_tags.find((v) => v.id === tagId)?.name || t('tag')
     await tagStore.refreshTags([fullpath])
 
-    message.success(t(is_remove ? 'removedTagFromImage' : 'addedTagToImage', { tag }))
+    uiMessage.success(t(is_remove ? 'removedTagFromImage' : 'addedTagToImage', { tag }))
   } catch (error) {
     console.error('Toggle tag error:', error)
-    message.error(t('tagOperationFailed'))
+    uiMessage.error(t('tagOperationFailed'))
   }
 }
 
@@ -432,7 +432,7 @@ const toggleAutoPlay = () => {
   // 重新启动计时器
   startAutoPlayTimer()
 
-  message.success(t('autoPlayStatus', { mode: autoPlayLabels.value[autoPlayMode.value] }))
+  uiMessage.success(t('autoPlayStatus', { mode: autoPlayLabels.value[autoPlayMode.value] }))
 }
 
 // 滑动到上一个
@@ -885,25 +885,18 @@ const removeCurrentItemFromList = () => {
 const handleDeleteCurrent = async () => {
   const fullpath = getCurrentFullpath()
   if (!fullpath) return
-  await new Promise<void>((resolve) => {
-    Modal.confirm({
-      title: t('confirmDelete'),
-      maskClosable: true,
-      content: getCurrentDisplayName(),
-      async onOk () {
-        const { events }  = await import('@/page/fileTransfer/hooks') 
-        await deleteFiles([fullpath])
-        message.success(t('deleteSuccess'))
-        events.emit('removeFiles', { paths: [fullpath], loc: getParentDirectory(fullpath) })
-        removeCurrentItemFromList()
-        showTags.value = false
-        resolve()
-      },
-      onCancel () {
-        resolve()
-      }
-    })
+  const ok = await uiDialog.confirm({
+    title: t('confirmDelete'),
+    message: getCurrentDisplayName(),
+    maskClosable: true,
   })
+  if (!ok) return
+  const { events }  = await import('@/page/fileTransfer/hooks')
+  await deleteFiles([fullpath])
+  uiMessage.success(t('deleteSuccess'))
+  events.emit('removeFiles', { paths: [fullpath], loc: getParentDirectory(fullpath) })
+  removeCurrentItemFromList()
+  showTags.value = false
 }
 
 const handleOpenFolder = async () => {

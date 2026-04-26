@@ -4,7 +4,8 @@ import { Snapshot, useWorkspeaceSnapshot } from '@/store/useWorkspeaceSnapshot'
 import { uniqueId } from 'lodash-es'
 import { computed, ref } from 'vue'
 import { ok } from 'vue3-ts-util'
-import { FileDoneOutlined, GithubOutlined, LockOutlined, MailOutlined, PlusOutlined, QuestionCircleOutlined } from '@/icon'
+import { uiMessage } from '@/ui'
+import MsIcon from '@/ui/MsIcon.vue'
 import { t } from '@/i18n'
 import { cloneDeep } from 'lodash-es'
 import { useImgSliStore } from '@/store/useImgSli'
@@ -14,7 +15,6 @@ import { ExtraPathType } from '@/api/db'
 import { onMounted } from 'vue'
 import { hasNewRelease, version, latestCommit } from '@/util/versionManager'
 import { isTauri } from '@/util/env'
-import { message } from 'ant-design-vue'
 import { useSettingSync } from '@/util'
 
 const global = useGlobalStore()
@@ -166,112 +166,108 @@ const modes = computed(() => {
         <h1>{{ $t('welcome') }}</h1>
         <!-- Compact Magic Switch with Welcome -->
         <div class="magic-switch-compact">
-          <a-tooltip>
-            <template #title>
-              <div class="switch-tooltip">
-                <div class="tooltip-title">{{ $t('magicSwitchTiktokView') }}</div>
-                <div class="tooltip-status">{{ global.magicSwitchTiktokView ? $t('magicSwitchEnabled') : $t('magicSwitchDisabled') }}</div>
-                <div class="tooltip-desc">{{ $t('magicSwitchDetailDesc') }}</div>
+          <v-tooltip location="bottom">
+            <template #activator="{ props: tooltipProps }">
+              <div v-bind="tooltipProps" class="ultra-cool-switch" :class="{ active: global.magicSwitchTiktokView }" @click="global.magicSwitchTiktokView = !global.magicSwitchTiktokView">
+                <div class="switch-bg">
+                  <div class="switch-track"></div>
+                  <div class="switch-thumb" :class="{ active: global.magicSwitchTiktokView }">
+                    <span class="switch-icon">{{ global.magicSwitchTiktokView ? '🎬' : '📁' }}</span>
+                  </div>
+                  <div class="switch-glow"></div>
+                </div>
+                <span class="switch-label">{{ $t('tiktokView') }}</span>
               </div>
             </template>
-            <div class="ultra-cool-switch" :class="{ active: global.magicSwitchTiktokView }" @click="global.magicSwitchTiktokView = !global.magicSwitchTiktokView">
-              <div class="switch-bg">
-                <div class="switch-track"></div>
-                <div class="switch-thumb" :class="{ active: global.magicSwitchTiktokView }">
-                  <span class="switch-icon">{{ global.magicSwitchTiktokView ? '🎬' : '📁' }}</span>
-                </div>
-                <div class="switch-glow"></div>
-              </div>
-              <span class="switch-label">{{ $t('tiktokView') }}</span>
+            <div class="switch-tooltip">
+              <div class="tooltip-title">{{ $t('magicSwitchTiktokView') }}</div>
+              <div class="tooltip-status">{{ global.magicSwitchTiktokView ? $t('magicSwitchEnabled') : $t('magicSwitchDisabled') }}</div>
+              <div class="tooltip-desc">{{ $t('magicSwitchDetailDesc') }}</div>
             </div>
-          </a-tooltip>
+          </v-tooltip>
         </div>
         
       </div>
       
       <div v-if="global.conf?.enable_access_control && global.dontShowAgain"
         style="margin-left: 16px;font-size: 1.5em;">
-        <LockOutlined title="Access Control mode" style="vertical-align: text-bottom;" />
+        <MsIcon name="lock" title="Access Control mode" style="vertical-align: text-bottom;" />
       </div>
       <div flex-placeholder />
       <a href="https://github.com/zanllp/sd-webui-infinite-image-browsing" target="_blank"
         class="quick-action">Github</a>
       <a href="https://github.com/zanllp/sd-webui-infinite-image-browsing/blob/main/.env.example" target="_blank"
         class="quick-action">{{ $t('privacyAndSecurity') }}</a>
-      <a-badge :count="hasNewRelease ? 'new' : null" :offset="[2,0]" color="geekblue">
+      <v-badge :content="hasNewRelease ? 'new' : undefined" :model-value="hasNewRelease" color="primary" offset-x="2" offset-y="0">
         <a href="https://github.com/zanllp/sd-webui-infinite-image-browsing/releases" target="_blank"
           class="quick-action">Releases</a>
-      </a-badge>
+      </v-badge>
       <a href="https://github.com/zanllp/sd-webui-infinite-image-browsing/wiki/Change-log" target="_blank"
         class="quick-action">{{ $t('changlog') }}</a>
       <a href="#" class="quick-action" @click.prevent="helpModalOpen = true">{{ $t('helpFeedback') }}</a>
       <div class="quick-action" v-if="!isTauri">
-        {{ $t('sync') }}  <a-tooltip :title="$t('syncDesc')">
-          <QuestionCircleOutlined/>
-        </a-tooltip>  :  <a-switch v-model:checked="sync" />
+        {{ $t('sync') }}  <v-tooltip :text="$t('syncDesc')">
+          <template #activator="{ props: tooltipProps }">
+            <span v-bind="tooltipProps"><MsIcon name="help" /></span>
+          </template>
+        </v-tooltip>  :  <v-switch v-model="sync" density="compact" hide-details inset />
       </div>
-      <a-radio-group v-model:value="global.darkModeControl" button-style="solid">
-        <a-radio-button value="light">Light</a-radio-button>
-        <a-radio-button value="auto">Auto</a-radio-button>
-        <a-radio-button value="dark">Dark</a-radio-button>
-      </a-radio-group>
+      <v-btn-toggle v-model="global.darkModeControl" density="compact" mandatory divided>
+        <v-btn value="light">Light</v-btn>
+        <v-btn value="auto">Auto</v-btn>
+        <v-btn value="dark">Dark</v-btn>
+      </v-btn-toggle>
     </div>
 
-    <a-modal
-      v-model:visible="helpModalOpen"
-      :title="$t('helpFeedback')"
-      :footer="null"
-      :mask-closable="true"
-      width="520px"
-    >
-      <div style="display: grid; gap: 10px;">
-        <div style="display: flex; gap: 10px; align-items: flex-start;">
-          <QuestionCircleOutlined style="margin-top: 2px; opacity: 0.85;" />
-          <div style="flex: 1; min-width: 0;">
-            <div style="font-weight: 600;">{{ $t('helpFeedbackWay1') }}</div>
-            <div style="margin-top: 6px; display: flex; gap: 10px; flex-wrap: wrap;">
-              <a :href="FAQ_URL" target="_blank" rel="noopener noreferrer">{{ $t('faq') }}</a>
-              <a :href="ISSUES_SEARCH_URL" target="_blank" rel="noopener noreferrer">{{ $t('helpFeedbackSearchIssues') }}</a>
+    <v-dialog v-model="helpModalOpen" max-width="520">
+      <v-card>
+        <v-card-title>{{ $t('helpFeedback') }}</v-card-title>
+        <v-card-text>
+          <div style="display: grid; gap: 10px;">
+            <div style="display: flex; gap: 10px; align-items: flex-start;">
+              <MsIcon name="help" style="margin-top: 2px; opacity: 0.85;" />
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-weight: 600;">{{ $t('helpFeedbackWay1') }}</div>
+                <div style="margin-top: 6px; display: flex; gap: 10px; flex-wrap: wrap;">
+                  <a :href="FAQ_URL" target="_blank" rel="noopener noreferrer">{{ $t('faq') }}</a>
+                  <a :href="ISSUES_SEARCH_URL" target="_blank" rel="noopener noreferrer">{{ $t('helpFeedbackSearchIssues') }}</a>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        <div style="display: flex; gap: 10px; align-items: flex-start;">
-          <GithubOutlined style="margin-top: 2px; opacity: 0.85;" />
-          <div style="flex: 1; min-width: 0;">
-            <div style="font-weight: 600;">{{ $t('helpFeedbackWay2') }}</div>
-            <div style="margin-top: 6px;">
-              <a :href="NEW_ISSUE_URL" target="_blank" rel="noopener noreferrer">{{ $t('helpFeedbackNewIssue') }}</a>
+            <div style="display: flex; gap: 10px; align-items: flex-start;">
+              <MsIcon name="code" style="margin-top: 2px; opacity: 0.85;" />
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-weight: 600;">{{ $t('helpFeedbackWay2') }}</div>
+                <div style="margin-top: 6px;">
+                  <a :href="NEW_ISSUE_URL" target="_blank" rel="noopener noreferrer">{{ $t('helpFeedbackNewIssue') }}</a>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        <div style="display: flex; gap: 10px; align-items: flex-start;">
-          <MailOutlined style="margin-top: 2px; opacity: 0.85;" />
-          <div style="flex: 1; min-width: 0;">
-            <div style="font-weight: 600;">{{ $t('helpFeedbackWay3') }}</div>
-            <div style="margin-top: 6px;">
-              <a :href="FEEDBACK_MAIL">qc@zanllp.cn</a>
+            <div style="display: flex; gap: 10px; align-items: flex-start;">
+              <MsIcon name="mail" style="margin-top: 2px; opacity: 0.85;" />
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-weight: 600;">{{ $t('helpFeedbackWay3') }}</div>
+                <div style="margin-top: 6px;">
+                  <a :href="FEEDBACK_MAIL">qc@zanllp.cn</a>
+                </div>
+              </div>
             </div>
           </div>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
+    <v-alert v-if="global.conf?.enable_access_control && !global.dontShowAgain" type="info" variant="tonal" density="compact">
+      <div class="access-mode-message">
+        <div>
+          {{ $t('accessControlModeTips') }}
         </div>
+        <div flex-placeholder />
+        <a @click.prevent="global.dontShowAgain = true">{{ $t('dontShowAgain') }}</a>
       </div>
-    </a-modal>
-
-    <a-alert show-icon v-if="global.conf?.enable_access_control && !global.dontShowAgain">
-      <template #message>
-        <div class="access-mode-message">
-          <div>
-            {{ $t('accessControlModeTips') }}
-          </div>
-          <div flex-placeholder />
-          <a @click.prevent="global.dontShowAgain = true">{{ $t('dontShowAgain') }}</a>
-        </div>
-      </template>
-      <template #icon>
-        <LockOutlined></LockOutlined>
-      </template>
-    </a-alert>
+    </v-alert>
     <!--a-alert show-icon v-if="!global.dontShowAgainNewImgOpts">
       <template #message>
         <div class="access-mode-message">
@@ -289,22 +285,22 @@ const modes = computed(() => {
         <ul>
           <li @click="addToExtraPath('walk')" class="item">
             <span class="text line-clamp-1">
-              <PlusOutlined /> {{ $t('add') }}
+              <MsIcon name="add" /> {{ $t('add') }}
             </span>
           </li>
             
-          <a-button v-if="global.showRandomImageInStartup" @click="openInCurrentTab('random-image')" type="primary" style="border-radius:100vw;margin-bottom: 8px;" ghost><span style="margin:0 6px;"><span style="margin-right: 8px;">🎲</span>{{ $t('tryMyLuck') }}</span></a-button>
+          <v-btn v-if="global.showRandomImageInStartup" @click="openInCurrentTab('random-image')" color="primary" variant="outlined" rounded="pill" style="margin-bottom: 8px;"><span style="margin:0 6px;"><span style="margin-right: 8px;">🎲</span>{{ $t('tryMyLuck') }}</span></v-btn>
           <actionContextMenu v-for="dir in walkModeSupportedDir" :key="dir.key"
             @open-in-new-tab="openInNewTab('local', dir.dir, 'walk')"
             @open-on-the-right="openOnTheRight('local', dir.dir, 'walk')">
             <li class="item rem" @click.prevent="openInCurrentTab('local', dir.dir, 'walk')">
               <span class="text line-clamp-2">{{ dir.zh }}</span>
               <template v-if="dir.can_delete">
-                <AButton type="link" @click.stop="onAliasExtraPathClick(dir.dir)">{{ $t('alias') }}
-                </AButton>
-                <AButton type="link" @click.stop="onRemoveExtraPathClick(dir.dir, 'walk')">{{
+                <v-btn variant="text" size="small" @click.stop="onAliasExtraPathClick(dir.dir)">{{ $t('alias') }}
+                </v-btn>
+                <v-btn variant="text" size="small" @click.stop="onRemoveExtraPathClick(dir.dir, 'walk')">{{
         $t('remove') }}
-                </AButton>
+                </v-btn>
               </template>
             </li>
           </actionContextMenu>
@@ -315,7 +311,7 @@ const modes = computed(() => {
         <ul>
           <li @click="addToExtraPath('scanned-fixed')" class="item">
             <span class="text line-clamp-1">
-              <PlusOutlined /> {{ $t('add') }}
+              <MsIcon name="add" /> {{ $t('add') }}
             </span>
           </li>
           <template
@@ -330,10 +326,10 @@ const modes = computed(() => {
                 <span class="text line-clamp-2"><span v-if="t == 'scanned-fixed'" class="fixed">Fixed</span>{{ dir.zh
                   }}</span>
                 <template v-if="dir.can_delete && (t === 'scanned-fixed' || t === 'scanned')">
-                  <AButton type="link" @click.stop="onAliasExtraPathClick(dir.dir)">{{ $t('alias') }}
-                  </AButton>
-                  <AButton type="link" @click.stop="onRemoveExtraPathClick(dir.dir, t)">{{ $t('remove') }}
-                  </AButton>
+                  <v-btn variant="text" size="small" @click.stop="onAliasExtraPathClick(dir.dir)">{{ $t('alias') }}
+                  </v-btn>
+                  <v-btn variant="text" size="small" @click.stop="onRemoveExtraPathClick(dir.dir, t)">{{ $t('remove') }}
+                  </v-btn>
                 </template>
               </li>
             </actionContextMenu>
@@ -364,19 +360,19 @@ const modes = computed(() => {
       <div class="feature-item recent" v-if="global.recent.length">
         <div class="title">
           <h2>{{ $t('recent') }}</h2>
-          <AButton @click="global.recent = []" type="link">{{ $t('clear') }}</AButton>
+          <v-btn @click="global.recent = []" variant="text" size="small">{{ $t('clear') }}</v-btn>
         </div>
         <ul>
           <li v-for="item in global.recent" :key="item.key" class="item"
             @click.prevent="openInCurrentTab('local', item.path, item.mode)">
-            <FileDoneOutlined class="icon" />
+            <MsIcon name="draft" class="icon" />
             <span class="text line-clamp-1">{{modePrefix(item.mode)}}{{ global.getShortPath(item.path) }}</span>
           </li>
         </ul>
       </div>
     </div>
 
-    <div class="ver-info" @dblclick="message.info('Ciallo～(∠・ω< )⌒☆')">
+    <div class="ver-info" @dblclick="uiMessage.info('Ciallo～(∠・ω< )⌒☆')">
       <div v-if="modes">
         Mode: {{ modes }}
       </div>

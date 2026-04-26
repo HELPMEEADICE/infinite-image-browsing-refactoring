@@ -1,6 +1,6 @@
 import { t } from '@/i18n'
 import { isImageFile } from '@/util'
-import { message } from 'ant-design-vue'
+import { uiMessage } from '@/ui'
 import { useWatchDocument } from 'vue3-ts-util'
 import { useHookShareState, useEventListen } from '.'
 import { closeImageFullscreenPreview } from '@/util/imagePreviewOperation'
@@ -59,7 +59,7 @@ export function usePreview (spec?: { loadNext?: () => void }) {
     }
     if (props.value.mode === 'walk') {
       if (canLoadNext.value) {
-        message.info(t('loadingNextFolder'))
+        uiMessage.info(t('loadingNextFolder'))
         eventEmitter.value.emit('loadNextDir', true) // 如果在全屏查看时外面scroller可能还停留在很久之前，使用全屏查看的索引
       }
     }

@@ -1,8 +1,6 @@
 import { t } from '@/i18n'
-import { message } from 'ant-design-vue'
 import { reactive } from 'vue'
-
-import { Modal } from 'ant-design-vue'
+import { uiDialog, uiMessage } from '@/ui'
 import { FetchQueue, idKey, typedEventEmitter, type UniqueId} from 'vue3-ts-util'
 import { useLocalStorage } from '@vueuse/core'
 export * from './file'
@@ -93,9 +91,9 @@ export const copy2clipboardI18n = async (text: string, msg?: string) => {
       document.execCommand('copy')
       document.body.removeChild(input)
     }
-    message.success(msg ?? t('copied'))
+    uiMessage.success(msg ?? t('copied'))
   } catch (error) {
-    message.error('copy failed. maybe it\'s non-secure environment')
+    uiMessage.error('copy failed. maybe it\'s non-secure environment')
   }
 }
 
@@ -205,7 +203,12 @@ export const actionConfirm = <T extends (...args: any[]) => void> (fn: T, msg ?:
   if (!msg) {
     msg = t('confirmThisAction')
   }
-  return (...args: Parameters<T>) => Modal.confirm({ content: msg, onOk: () => fn(...args) })
+  return async (...args: Parameters<T>) => {
+    const confirmed = await uiDialog.confirm({ message: msg! })
+    if (confirmed) {
+      fn(...args)
+    }
+  }
 }
 
 export const settingSyncKey = prefix + 'sync'

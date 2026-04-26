@@ -1,0 +1,1 @@
+const r=t=>{const s=[];return t.shiftKey&&s.push("Shift"),t.ctrlKey&&s.push("Ctrl"),t.metaKey&&s.push("Cmd"),(t.code.startsWith("Key")||t.code.startsWith("Digit"))&&s.push(t.code),t.key==="Escape"&&s.push("Esc"),s.join(" + ")};export{r as g};

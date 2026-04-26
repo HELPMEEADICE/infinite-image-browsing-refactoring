@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { deepComputedEffect } from 'vue3-ts-util'
-import { message } from 'ant-design-vue'
 import { t } from '@/i18n'
+import { uiMessage } from '@/ui'
 
 interface KVPair {
   key: string
@@ -158,12 +158,12 @@ const handleModeChange = (newMode: 'str' | 'json') => {
 
   // 检查是否允许切换
   if (newMode === 'json' && currentValue) {
-    message.warning(t('clearBeforeSwitchToJson'))
+    uiMessage.warning(t('clearBeforeSwitchToJson'))
     return
   }
 
   if (newMode === 'str' && jsonInput.value.trim()) {
-    message.warning(t('clearBeforeSwitchToString'))
+    uiMessage.warning(t('clearBeforeSwitchToString'))
     console.warn('Switching to string mode requires empty value', {
       val: jsonInput.value
     })
@@ -199,28 +199,26 @@ defineExpose({
 <template>
   <div class="kv-pair-editor">
     <div class="kv-key-wrapper">
-      <a-input v-model:value="localKv.key" :placeholder="t('keyPlaceholder')" class="kv-input kv-key" />
+      <v-text-field v-model="localKv.key" :placeholder="t('keyPlaceholder')" class="kv-input kv-key" hide-details density="compact" />
       <div v-if="keyError" class="key-error-hint">{{ keyError }}</div>
     </div>
 
     <div v-if="mode === 'json'" class="kv-value-wrapper">
-      <ATextarea v-model:value="jsonInput" @blur="onJsonUpdate" :placeholder="t('jsonValuePlaceholder')"
-        :auto-size="{ maxRows: 8 }" class="kv-input kv-value" />
+      <v-textarea v-model="jsonInput" @blur="onJsonUpdate" :placeholder="t('jsonValuePlaceholder')"
+        :rows="4" auto-grow class="kv-input kv-value" hide-details density="compact" />
       <div v-if="!isValidJson" class="json-error-hint">{{ t('jsonFormatError') }}</div>
     </div>
 
-    <ATextarea v-else  :auto-size="{ maxRows: 8 }" v-model:value="stringInput" :placeholder="t('stringValuePlaceholder')" class="kv-input kv-value" />
+    <v-textarea v-else :rows="4" auto-grow v-model="stringInput" :placeholder="t('stringValuePlaceholder')" class="kv-input kv-value" hide-details density="compact" />
 
-    <a-select :value="mode" size="small" class="mode-selector"
-      :getPopupContainer="(trigger: any) => trigger.parentNode as HTMLDivElement" @update:value="handleModeChange"
-      style="width: 80px">
-      <a-select-option value="str">{{ t('stringMode') }}</a-select-option>
-      <a-select-option value="json">{{ t('jsonMode') }}</a-select-option>
-    </a-select>
+    <v-select :model-value="mode" class="mode-selector"
+      @update:model-value="handleModeChange"
+      :items="[{ title: t('stringMode'), value: 'str' }, { title: t('jsonMode'), value: 'json' }]"
+      style="width: 100px" hide-details density="compact" />
 
-    <a-button size="small" danger @click="handleRemove" class="delete-btn">
+    <v-btn size="small" color="error" variant="text" @click="handleRemove" class="delete-btn">
       {{ t('delete') }}
-    </a-button>
+    </v-btn>
   </div>
 </template>
 

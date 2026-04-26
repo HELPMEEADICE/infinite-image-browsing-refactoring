@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { message } from 'ant-design-vue'
 import { t } from '@/i18n'
+import { uiMessage } from '@/ui'
 import { updateExif, getImageGenerationInfo } from '@/api'
 import { parse } from '@/util/stable-diffusion-image-metadata'
 import { globalEvents, useGlobalEventListen } from '@/util'
@@ -137,7 +137,7 @@ const handleSave = async () => {
 
   // 校验正向提示词不可为空
   if (!positivePrompt.value.trim()) {
-    message.error(t('positivePromptRequired'))
+    uiMessage.error(t('positivePromptRequired'))
     return
   }
 
@@ -147,7 +147,7 @@ const handleSave = async () => {
     .map(ref => ref.validate())
 
   if (validators.some(valid => !valid)) {
-    message.error(t('fixErrorsBeforeSave'))
+    uiMessage.error(t('fixErrorsBeforeSave'))
     return
   }
 
@@ -156,7 +156,7 @@ const handleSave = async () => {
 
     const fullPrompt = buildPrompt(positivePrompt.value, negativePrompt.value, otherInfo.value, kvPairs.value)
     await updateExif(file.value.fullpath, fullPrompt)
-    message.success(t('savePromptSuccess'))
+    uiMessage.success(t('savePromptSuccess'))
 
     // 关闭模态框并触发全局事件
     show.value = false
@@ -164,7 +164,7 @@ const handleSave = async () => {
   } catch (error: any) {
     console.error('Save prompt error:', error)
     if (error.message && !error.message.includes('Invalid JSON')) {
-      message.error(t('savePromptFailed'))
+      uiMessage.error(t('savePromptFailed'))
     }
     throw error
   } finally {
@@ -179,19 +179,21 @@ const handleCancel = () => {
 </script>
 
 <template>
-  <a-modal v-model:visible="show" :title="file ? t('editPromptTitle', { name: file.name }) : ''" :width="'70vw'"
-    :footer="null" :maskClosable="true" destroyOnClose  >
-    <div class="prompt-editor-modal" @wheel.stop @keydown.stop @keyup.stop @keypress.stop>
+  <v-dialog v-model="show" max-width="70vw" persistent>
+    <v-card>
+      <v-card-title>{{ file ? t('editPromptTitle', { name: file.name }) : '' }}</v-card-title>
+      <v-card-text>
+        <div class="prompt-editor-modal" @wheel.stop @keydown.stop @keyup.stop @keypress.stop>
       <div class="editor-section">
         <div class="section-label">{{ t('positivePrompt') }}</div>
-        <a-textarea v-model:value="positivePrompt" :placeholder="t('positivePrompt')"
-          :autoSize="{ minRows: 3, maxRows: 8 }" class="prompt-input" />
+        <v-textarea v-model="positivePrompt" :placeholder="t('positivePrompt')"
+          :rows="4" auto-grow class="prompt-input" hide-details />
       </div>
 
       <div class="editor-section">
         <div class="section-label">{{ t('negativePrompt') }}</div>
-        <a-textarea v-model:value="negativePrompt" :placeholder="t('negativePrompt')"
-          :autoSize="{ minRows: 2, maxRows: 6 }" class="prompt-input" />
+        <v-textarea v-model="negativePrompt" :placeholder="t('negativePrompt')"
+          :rows="3" auto-grow class="prompt-input" hide-details />
       </div>
 
       <div class="editor-section">
@@ -199,14 +201,14 @@ const handleCancel = () => {
           {{ t('otherInfo') }}
           <span class="section-hint">({{ t('otherInfoHint') }})</span>
         </div>
-        <a-textarea v-model:value="otherInfo" :placeholder="t('otherInfo')" :autoSize="{ minRows: 2, maxRows: 6 }"
-          class="prompt-input" />
+        <v-textarea v-model="otherInfo" :placeholder="t('otherInfo')" :rows="3"
+          auto-grow class="prompt-input" hide-details />
       </div>
 
       <div class="editor-section kv-editor-section">
         <div class="kv-header">
           <div class="section-label">{{ t('extraMetaInfoTitle') }}</div>
-          <a-button size="small" @click="addKvPair">{{ t('addKvButton') }}</a-button>
+          <v-btn size="small" variant="text" @click="addKvPair">{{ t('addKvButton') }}</v-btn>
         </div>
         <div class="section-hint">
           {{ t('extraMetaInfoHint') }}
@@ -229,13 +231,15 @@ const handleCancel = () => {
       </div>
 
       <div class="modal-footer">
-        <a-button @click="handleCancel">{{ t('cancel') }}</a-button>
-        <a-button type="primary" @click="handleSave" :loading="saving">
+        <v-btn @click="handleCancel">{{ t('cancel') }}</v-btn>
+        <v-btn color="primary" @click="handleSave" :loading="saving">
           {{ t('savePrompt') }}
-        </a-button>
+        </v-btn>
       </div>
-    </div>
-  </a-modal>
+        </div>
+      </v-card-text>
+    </v-card>
+  </v-dialog>
 </template>
 
 <style scoped lang="scss">

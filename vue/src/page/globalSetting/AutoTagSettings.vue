@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { message } from 'ant-design-vue'
+import { uiMessage } from '@/ui'
 import { setAppFeSetting } from '@/api'
 import { useGlobalStore } from '@/store/useGlobalStore'
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, DeleteOutlined } from '@/icon'
 import { t } from '@/i18n'
 import { SearchSelect } from 'vue3-ts-util'
 import type { Tag } from '@/api/db'
@@ -66,13 +66,13 @@ const removeFilter = (rule: Rule, index: number) => {
 const save = async () => {
   try {
     await setAppFeSetting('auto_tag_rules' as any, rules.value)
-    message.success(t('autoTag.saveSuccess'))
+    uiMessage.success(t('autoTag.saveSuccess'))
     // Update local store
     if (globalStore.conf && globalStore.conf.app_fe_setting) {
       globalStore.conf.app_fe_setting.auto_tag_rules = rules.value
     }
   } catch (e) {
-    message.error(t('autoTag.saveFail') + ': ' + e)
+    uiMessage.error(t('autoTag.saveFail') + ': ' + e)
   }
 }
 
@@ -100,11 +100,13 @@ const operatorOptions = computed(() => [
     <div class="header">
       <div class="description">{{ t('autoTag.description') }}</div>
       <div class="actions">
-        <a-button type="primary" @click="addRule">
-          <template #icon><PlusOutlined /></template>
+        <v-btn color="primary" @click="addRule">
+          <template #prepend>
+            <PlusOutlined />
+          </template>
           {{ t('autoTag.addRule') }}
-        </a-button>
-        <a-button type="primary" @click="save" style="margin-left: 16px;">{{ t('autoTag.saveConfig') }}</a-button>
+        </v-btn>
+        <v-btn color="primary" @click="save" class="ml-4">{{ t('autoTag.saveConfig') }}</v-btn>
       </div>
     </div>
     
@@ -119,24 +121,26 @@ const operatorOptions = computed(() => [
             :disabled="!customTags.length"
             :placeholder="t('autoTag.inputTagName')" 
           />
-          <a-button type="text" danger @click="removeRule(rIndex)">
-            <template #icon><DeleteOutlined /></template>
-          </a-button>
+          <v-btn variant="text" color="error" @click="removeRule(rIndex)" icon>
+            <DeleteOutlined />
+          </v-btn>
         </div>
         
         <div class="filters-list">
           <div v-for="(filter, fIndex) in rule.filters" :key="fIndex" class="filter-row">
-            <a-select v-model:value="filter.field" style="width: 240px" :options="fieldOptions" />
-            <a-select v-model:value="filter.operator" style="width: 160px" :options="operatorOptions" />
-            <a-input v-model:value="filter.value" :placeholder="t('autoTag.value')" style="flex: 1" />
-            <a-button type="text" danger @click="removeFilter(rule, fIndex)">
-              <template #icon><DeleteOutlined /></template>
-            </a-button>
+            <v-select v-model="filter.field" style="width: 240px" :items="fieldOptions" item-title="label" item-value="value" hide-details />
+            <v-select v-model="filter.operator" style="width: 160px" :items="operatorOptions" item-title="label" item-value="value" hide-details />
+            <v-text-field v-model="filter.value" :placeholder="t('autoTag.value')" style="flex: 1" hide-details />
+            <v-btn variant="text" color="error" @click="removeFilter(rule, fIndex)" icon>
+              <DeleteOutlined />
+            </v-btn>
           </div>
-          <a-button type="dashed" block @click="addFilter(rule)" style="margin-top: 8px">
-            <template #icon><PlusOutlined /></template>
+          <v-btn variant="outlined" block @click="addFilter(rule)" class="mt-2">
+            <template #prepend>
+              <PlusOutlined />
+            </template>
             {{ t('autoTag.addFilter') }}
-          </a-button>
+          </v-btn>
         </div>
       </div>
     </div>

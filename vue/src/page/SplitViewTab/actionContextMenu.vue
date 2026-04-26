@@ -1,29 +1,43 @@
 <script lang="ts" setup>
-import type { MenuInfo } from 'ant-design-vue/lib/menu/src/interface'
-
+import { ref } from 'vue'
 
 const emit = defineEmits(['openOnTheRight', 'openInNewTab'])
-const onMenuClick = (e: MenuInfo) => {
-  switch (e.key.toString()) {
-    case 'openOnTheRight':
-      emit('openOnTheRight')
-      break
-    case 'openInNewTab':
-      emit('openInNewTab')
-      break
-  }
+const open = ref(false)
+const x = ref(0)
+const y = ref(0)
+
+const onContextMenu = (e: MouseEvent) => {
+  e.preventDefault()
+  x.value = e.clientX
+  y.value = e.clientY
+  open.value = true
+}
+
+const onMenuClick = (key: 'openOnTheRight' | 'openInNewTab') => {
+  open.value = false
+  emit(key)
 }
 </script>
 <template>
-  <a-dropdown :trigger="['contextmenu']" >
+  <div @contextmenu="onContextMenu">
     <slot />
-    <template #overlay >
-      <a-menu @click="onMenuClick">
-        <a-menu-item key="openOnTheRight">{{ $t('openOnTheRight') }}</a-menu-item>
-        <a-menu-item key="openInNewTab">{{ $t('openInNewTab') }}</a-menu-item>
-      </a-menu>
-    </template>
-  </a-dropdown>
+    <v-menu
+      v-model="open"
+      :scrim="false"
+      :close-on-content-click="true"
+      location-strategy="connected"
+      :target="[x, y]"
+    >
+      <v-list density="compact" min-width="180">
+        <v-list-item @click="onMenuClick('openOnTheRight')">
+          <v-list-item-title>{{ $t('openOnTheRight') }}</v-list-item-title>
+        </v-list-item>
+        <v-list-item @click="onMenuClick('openInNewTab')">
+          <v-list-item-title>{{ $t('openInNewTab') }}</v-list-item-title>
+        </v-list-item>
+      </v-list>
+    </v-menu>
+  </div>
 </template>
 
 <style scoped lang="scss"></style>
